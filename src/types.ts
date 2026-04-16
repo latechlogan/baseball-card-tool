@@ -25,7 +25,6 @@ export interface PlayerStats {
   iso: number;                       // sluggingPercentage - battingAverage
 
   // Optional Statcast fields — unavailable from MLB Stats API for most MiLB players
-  katoh?: number;
   exitVelo?: number;
   hardContactPct?: number;
 }
@@ -129,10 +128,7 @@ export interface ScoringThresholds {
   bbKRatioElite: number;
   bbKRatioMin: number;
   bbKRatioLow: number;
-  // KATOH / Statcast
-  katohElite: number;
-  katohModerate: number;
-  katohLow: number;
+  // Statcast
   exitVeloElite: number;
   exitVeloMin: number;
   hardContactElite: number;

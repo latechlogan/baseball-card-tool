@@ -1,8 +1,8 @@
 import { Player, PlayerScore, UserConfig } from '../types.js';
 
 // The maximum achievable raw score before PA weighting, used for normalization.
-// Breakdown: age(20) + composite(40) + power(20) + discipline(15) + KATOH(5) + exitVelo(3) = 103
-const MAX_RAW_SCORE = 103;
+// Breakdown: age(20) + composite(40) + power(20) + discipline(15) + exitVelo(3) = 98
+const MAX_RAW_SCORE = 98;
 
 /**
  * Run all hard filters against a player. Returns whether the player passed and
@@ -132,14 +132,16 @@ export function scorePlayer(player: Player, config: UserConfig): PlayerScore {
     rawScore += 5;
   }
 
-  // Step 5 — Power Profile Score (XBH/H%)
+  // Step 5 — Power Profile Score (XBH/H%, max 20 pts)
   const xbhPct = player.stats.xbhPct;
-  if (xbhPct !== null && xbhPct >= t.xbhPctElite) {
+  if (xbhPct !== null && xbhPct >= 0.42) {
     rawScore += 20;
-  } else if (xbhPct !== null && xbhPct >= t.xbhPctMin) {
-    rawScore += 12;
-  } else if (xbhPct !== null && xbhPct >= t.xbhPctLow) {
-    rawScore += 6;
+  } else if (xbhPct !== null && xbhPct >= 0.37) {
+    rawScore += 14;
+  } else if (xbhPct !== null && xbhPct >= 0.32) {
+    rawScore += 8;
+  } else if (xbhPct !== null && xbhPct >= 0.28) {
+    rawScore += 3;
   } else {
     flags.push('WEAK_POWER_PROFILE');
   }
@@ -155,20 +157,7 @@ export function scorePlayer(player: Player, config: UserConfig): PlayerScore {
     flags.push('POOR_PLATE_DISCIPLINE');
   }
 
-  // Step 7 — KATOH Bonus (optional signal)
-  if (player.stats.katoh !== undefined) {
-    if (player.stats.katoh >= t.katohElite) {
-      rawScore += 5;
-    } else if (player.stats.katoh >= t.katohModerate) {
-      rawScore += 3;
-    } else if (player.stats.katoh >= t.katohLow) {
-      rawScore += 1;
-    }
-  } else {
-    flags.push('KATOH_UNAVAILABLE');
-  }
-
-  // Step 8 — Exit Velocity / Hard Contact Bonus (optional, additive)
+  // Step 7 — Exit Velocity / Hard Contact Bonus (optional, additive)
   if (player.stats.exitVelo !== undefined) {
     if (player.stats.exitVelo >= t.exitVeloElite) {
       rawScore += 3;
@@ -184,10 +173,10 @@ export function scorePlayer(player: Player, config: UserConfig): PlayerScore {
     }
   }
 
-  // Step 9 — Apply PA Confidence Weight (rounded to one decimal place)
+  // Step 8 — Apply PA Confidence Weight (rounded to one decimal place)
   const weightedScore = Math.round(rawScore * multiplier * 10) / 10;
 
-  // Step 10 — Normalize to 0–100
+  // Step 9 — Normalize to 0–100
   const score = Math.max(
     0,
     Math.min(100, Math.round((weightedScore / MAX_RAW_SCORE) * 100))

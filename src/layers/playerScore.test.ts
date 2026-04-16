@@ -44,12 +44,11 @@ function makePlayer(overrides: Omit<Partial<Player>, 'stats'> & { stats?: Partia
 // Scoring breakdown (PA 290 → high, ×1.0):
 //   age delta (20-18=2)    → +20
 //   OPS 0.957 ≥ 0.900      → +20
-//   ISO = 0.565-74/240     →  0.257 ≥ 0.220 → +12
+//   ISO = 0.565-74/240     →  0.257 ≥ 0.180 → +12
 //   OBP 0.392 ≥ 0.380      →  +8
 //   xbhPct 0.459 ≥ 0.45    → +20
 //   bbKRatio 1.128 ≥ 1.0   → +15
-//   KATOH undefined        →   0 (flag: KATOH_UNAVAILABLE)
-//   raw 95 × 1.0 = 95 → round(95/103×100) = 92
+//   raw 95 × 1.0 = 95 → round(95/98×100) = 97
 // ---------------------------------------------------------------------------
 test('elite prospect — young for level, elite stats, high PA', () => {
   const player = makePlayer({
@@ -68,8 +67,7 @@ test('elite prospect — young for level, elite stats, high PA', () => {
   assert.equal(result.eligible, true);
   assert.equal(result.confidence, 'high');
   assert.ok(result.score >= 85 && result.score <= 100, `score ${result.score} not in 85–100`);
-  assert.equal(result.score, 92);
-  assert.ok(result.flags.includes('KATOH_UNAVAILABLE'));
+  assert.equal(result.score, 97);
   assert.ok(!result.flags.includes('OLD_FOR_LEVEL'));
 });
 
@@ -80,12 +78,11 @@ test('elite prospect — young for level, elite stats, high PA', () => {
 // Scoring breakdown (PA 224 → high, ×1.0):
 //   age delta (21-21=0)    →   0
 //   OPS 0.829 ≥ 0.825      → +14
-//   ISO = 0.474-52/190     →  0.200 ≥ 0.180 → +8
+//   ISO = 0.474-52/190     →  0.200 ≥ 0.180 → +12
 //   OBP 0.355 ≥ 0.340      →  +5
-//   xbhPct 0.404 ≥ 0.40    → +12
+//   xbhPct 0.404 ≥ 0.37    → +14
 //   bbKRatio 0.791 ≥ 0.75  → +10
-//   KATOH undefined        →   0 (flag: KATOH_UNAVAILABLE)
-//   raw 49 × 1.0 = 49 → round(49/103×100) = 48
+//   raw 55 × 1.0 = 55 → round(55/98×100) = 56
 // ---------------------------------------------------------------------------
 test('solid watch-list prospect — age-appropriate, decent stats, high PA', () => {
   const player = makePlayer({
@@ -104,7 +101,6 @@ test('solid watch-list prospect — age-appropriate, decent stats, high PA', () 
   assert.equal(result.eligible, true);
   assert.equal(result.confidence, 'high');
   assert.ok(result.score >= 40 && result.score <= 60, `score ${result.score} not in 40–60`);
-  assert.ok(result.flags.includes('KATOH_UNAVAILABLE'));
 });
 
 // ---------------------------------------------------------------------------
@@ -114,12 +110,11 @@ test('solid watch-list prospect — age-appropriate, decent stats, high PA', () 
 // Scoring breakdown (PA 134 → low, ×0.5):
 //   age delta (19-17=2)    → +20
 //   OPS 0.931 ≥ 0.900      → +20
-//   ISO = 0.543-33/110     →  0.243 ≥ 0.220 → +12
+//   ISO = 0.543-33/110     →  0.243 ≥ 0.180 → +12
 //   OBP 0.388 ≥ 0.380      →  +8
-//   xbhPct 0.424 ≥ 0.40    → +12
+//   xbhPct 0.424 ≥ 0.42    → +20
 //   bbKRatio 0.913 ≥ 0.75  → +10
-//   KATOH undefined        →   0 (flag: KATOH_UNAVAILABLE)
-//   raw 82 × 0.5 = 41 → round(41/103×100) = 40
+//   raw 90 × 0.5 = 45 → round(45/98×100) = 46
 // ---------------------------------------------------------------------------
 test('small sample flier — great profile but low PA', () => {
   const player = makePlayer({
@@ -139,7 +134,6 @@ test('small sample flier — great profile but low PA', () => {
   assert.equal(result.eligible, true);
   assert.equal(result.confidence, 'low');
   assert.ok(result.flags.includes('SMALL_SAMPLE_WATCH_ONLY'));
-  assert.ok(result.flags.includes('KATOH_UNAVAILABLE'));
 });
 
 // ---------------------------------------------------------------------------
@@ -207,11 +201,11 @@ test('two-way player — ineligible with manual review flag, not pitcher exclude
 // Test 7 — Old for level
 // Expected: eligible, flag OLD_FOR_LEVEL, lower score than age-appropriate peer
 //
-// Shared stats → base_raw=49 (OPS 0.844→14, ISO 0.209→8, OBP 0.352→5,
-//   xbhPct 0.415→12, bbKRatio 0.821→10)
+// Shared stats → base_raw=55 (OPS 0.844→14, ISO 0.209≥0.180→12, OBP 0.352→5,
+//   xbhPct 0.415≥0.37→14, bbKRatio 0.821→10)
 //
-// Old player (age 24, A+, delta=20-24=-4 ≤ -2): raw=49-20=29 → score=28
-// Age-appropriate (age 20, A+, delta=0):         raw=49     → score=48
+// Old player (age 24, A+, delta=20-24=-4 ≤ -2): raw=55-20=35 → score=36
+// Age-appropriate (age 20, A+, delta=0):         raw=55     → score=56
 // ---------------------------------------------------------------------------
 test('old for level — age 24 at A+, penalized age score and flag applied', () => {
   const sharedStats = {
@@ -231,50 +225,4 @@ test('old for level — age 24 at A+, penalized age score and flag applied', () 
   assert.equal(oldResult.confidence, 'high');
   assert.ok(oldResult.flags.includes('OLD_FOR_LEVEL'));
   assert.ok(oldResult.score < peerResult.score);
-});
-
-// ---------------------------------------------------------------------------
-// Test 8 — KATOH bonus applied
-// Expected: identical prospects differ only in KATOH; KATOH version scores higher
-//
-// Without KATOH (flag: KATOH_UNAVAILABLE):
-//   age delta (19-19=0)    →   0
-//   OPS 0.825 ≥ 0.825      → +14
-//   ISO = 0.475-50/183     →  0.202 ≥ 0.180 → +8
-//   OBP 0.350 ≥ 0.340      →  +5
-//   xbhPct 0.400 ≥ 0.40    → +12
-//   bbKRatio 0.789 ≥ 0.75  → +10
-//   raw 49 × 1.0 = 49 → round(49/103×100) = 48
-//
-// With KATOH 3.2 (≥ 3.0 → +5):
-//   raw 54 × 1.0 = 54 → round(54/103×100) = 52
-// ---------------------------------------------------------------------------
-test('KATOH bonus — prospect with katoh 3.2 scores higher than identical prospect without', () => {
-  const baseStats = {
-    pa: 215, ab: 183, hits: 50, doubles: 11, triples: 1, homeRuns: 8,
-    strikeOuts: 38, baseOnBalls: 30,
-    obp: 0.350, slg: 0.475, ops: 0.825,
-    bbPct: 0.140, kPct: 0.177, bbKRatio: 0.789, xbhPct: 0.400, iso: 0.202,
-  };
-
-  const withKatoh = makePlayer({
-    age: 19, level: 'A', position: '2B',
-    stats: { ...baseStats, katoh: 3.2 },
-  });
-
-  const withoutKatoh = makePlayer({
-    age: 19, level: 'A', position: '2B',
-    stats: { ...baseStats },
-  });
-
-  const resultWith = scorePlayer(withKatoh, config);
-  const resultWithout = scorePlayer(withoutKatoh, config);
-
-  assert.equal(resultWith.eligible, true);
-  assert.equal(resultWithout.eligible, true);
-  assert.equal(resultWith.score, 52);
-  assert.equal(resultWithout.score, 48);
-  assert.ok(resultWith.score > resultWithout.score);
-  assert.ok(!resultWith.flags.includes('KATOH_UNAVAILABLE'));
-  assert.ok(resultWithout.flags.includes('KATOH_UNAVAILABLE'));
 });

@@ -4,8 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "pipeline": "tsx src/pipeline.ts",
-    "pipeline:fresh": "tsx src/pipeline.ts --fresh",
+    "pipeline":        "tsx src/pipeline.ts",
+    "pipeline:fresh":  "tsx src/pipeline.ts --fresh",
+    "pipeline:2025":   "tsx src/pipeline.ts --season 2025",
+    "pipeline:2026":   "tsx src/pipeline.ts --season 2026",
     "dev": "tsx watch src/pipeline.ts",
     "test": "tsx --test src/**/*.test.ts",
     "scraper:mlb": "tsx src/scrapers/mlbStatsApi.manual.ts"

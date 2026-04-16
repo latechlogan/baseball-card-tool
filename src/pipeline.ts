@@ -5,7 +5,22 @@ import { scorePlayer } from './layers/playerScore.js'
 import { cache } from './cache.js'
 import type { UserConfig, Player, PlayerScore, CompositeScore } from './types.js'
 
-const SEASON = new Date().getFullYear()
+// Parse season from CLI args: npm run pipeline -- --season 2025
+// Falls back to current year if not provided
+function parseSeason(): number {
+  const idx = process.argv.indexOf('--season')
+  if (idx !== -1 && process.argv[idx + 1]) {
+    const parsed = parseInt(process.argv[idx + 1], 10)
+    if (!isNaN(parsed) && parsed >= 2010 && parsed <= new Date().getFullYear()) {
+      return parsed
+    }
+    console.warn(`[pipeline] invalid --season value, falling back to current year`)
+  }
+  return new Date().getFullYear()
+}
+
+const SEASON = parseSeason()
+console.log(`[pipeline] season: ${SEASON}`)
 
 const forceFresh = process.argv.includes('--fresh')
 if (forceFresh) {

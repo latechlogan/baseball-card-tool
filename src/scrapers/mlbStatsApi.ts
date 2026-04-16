@@ -164,7 +164,6 @@ function normalizeSplit(split: StatSplit, profile: PlayerProfile, level: MiLBLev
       strikeOuts: so, baseOnBalls: bb,
       avg, obp, slg, ops,
       bbPct, kPct, bbKRatio, xbhPct, iso,
-      katoh:          undefined,
       exitVelo:       undefined,
       hardContactPct: undefined,
     },
