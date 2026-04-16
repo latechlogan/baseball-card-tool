@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "pipeline": "tsx src/pipeline.ts",
+    "pipeline:fresh": "tsx src/pipeline.ts --fresh",
     "dev": "tsx watch src/pipeline.ts",
     "test": "tsx --test src/**/*.test.ts",
     "scraper:mlb": "tsx src/scrapers/mlbStatsApi.manual.ts"
