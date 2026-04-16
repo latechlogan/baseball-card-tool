@@ -1,0 +1,37 @@
+{
+  "minPA": 150,
+  "kPctMax": 20,
+  "wrcPlusStrongBuy": 160,
+  "wrcPlusModerate": 150,
+  "wrcPlusWatch": 140,
+  "xbhPctMin": 40,
+  "xbhPctElite": 45,
+  "xbhPctLow": 35,
+  "bbKRatioMin": 0.75,
+  "bbKRatioElite": 1.0,
+  "bbKRatioLow": 0.50,
+  "katohElite": 3.0,
+  "katohModerate": 2.0,
+  "katohLow": 1.0,
+  "exitVeloElite": 92,
+  "exitVeloMin": 90,
+  "hardContactElite": 45,
+  "hardContactMin": 40,
+  "playerScoreWeight": 0.50,
+  "cardScoreWeight": 0.30,
+  "sentimentScoreWeight": 0.20,
+  "ageVsLevelTable": {
+    "R": 17,
+    "A-": 18,
+    "A": 19,
+    "A+": 20,
+    "AA": 21,
+    "AAA": 22
+  },
+  "paConfidenceTiers": {
+    "ignore": 100,
+    "watchOnly": 149,
+    "reducedWeight": 199,
+    "fullWeight": 200
+  }
+}
