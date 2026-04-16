@@ -14,13 +14,14 @@ function makeStats(overrides: Partial<PlayerStats>): PlayerStats {
   return {
     pa: 250, ab: 215, hits: 62, doubles: 14, triples: 2, homeRuns: 9,
     strikeOuts: 44, baseOnBalls: 30,
+    avg: 0.288,
     obp: 0.358, slg: 0.442, ops: 0.800,
     bbPct: 0.120, kPct: 0.176, bbKRatio: 0.682, xbhPct: 0.403, iso: 0.153,
     ...overrides,
-  };
+  } as PlayerStats;
 }
 
-function makePlayer(overrides: Partial<Player> & { stats?: Partial<PlayerStats> }): Player {
+function makePlayer(overrides: Omit<Partial<Player>, 'stats'> & { stats?: Partial<PlayerStats> }): Player {
   const { stats, ...rest } = overrides;
   return {
     name: 'Test Player',

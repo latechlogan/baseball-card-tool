@@ -6,7 +6,8 @@
   "scripts": {
     "pipeline": "tsx src/pipeline.ts",
     "dev": "tsx watch src/pipeline.ts",
-    "test": "tsx --test src/**/*.test.ts"
+    "test": "tsx --test src/**/*.test.ts",
+    "scraper:mlb": "tsx src/scrapers/mlbStatsApi.manual.ts"
   },
   "repository": {
     "type": "git",

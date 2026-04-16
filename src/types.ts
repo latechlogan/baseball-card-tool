@@ -12,6 +12,7 @@ export interface PlayerStats {
   homeRuns: number;
   strikeOuts: number;
   baseOnBalls: number;
+  avg: number;                       // battingAverage (provided by API) — used for ISO derivation
   obp: number;                       // onBasePercentage (provided by API)
   slg: number;                       // sluggingPercentage (provided by API)
   ops: number;                       // ops (provided by API)
