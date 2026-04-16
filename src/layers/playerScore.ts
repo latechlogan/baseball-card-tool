@@ -1,7 +1,7 @@
 import { Player, PlayerScore, UserConfig } from '../types.js';
 
 // The maximum achievable raw score before PA weighting, used for normalization.
-// Breakdown: age(20) + wRC+(40) + power(20) + discipline(15) + KATOH(5) + exitVelo(3) = 103
+// Breakdown: age(20) + composite(40) + power(20) + discipline(15) + KATOH(5) + exitVelo(3) = 103
 const MAX_RAW_SCORE = 103;
 
 /**
@@ -69,6 +69,10 @@ export function getAgeVsLevelDelta(player: Player, config: UserConfig): number {
  * accumulated flags, and eligibility. Never throws — bad input returns ineligible.
  */
 export function scorePlayer(player: Player, config: UserConfig): PlayerScore {
+  // Derive ISO — slg minus batting average. ab===0 guard prevents division by zero.
+  const avg = player.stats.ab > 0 ? (player.stats.hits / player.stats.ab) : 0;
+  const iso = player.stats.slg - avg;
+
   // Step 1 — Hard Filters
   const { passed, flags: hardFilterFlags } = applyHardFilters(player, config);
   if (!passed) {
@@ -100,23 +104,41 @@ export function scorePlayer(player: Player, config: UserConfig): PlayerScore {
     flags.push('OLD_FOR_LEVEL');
   }
 
-  // Step 4 — wRC+ Score
-  if (player.stats.wrcPlus >= t.wrcPlusStrongBuy) {
-    rawScore += 40;
-  } else if (player.stats.wrcPlus >= t.wrcPlusModerate) {
-    rawScore += 30;
-  } else if (player.stats.wrcPlus >= t.wrcPlusWatch) {
-    rawScore += 15;
+  // Step 4 — Composite Offensive Score (OPS + ISO + OBP, max 40 pts)
+  // OPS (max 20)
+  if (player.stats.ops >= t.opsStrongBuy) {
+    rawScore += 20;
+  } else if (player.stats.ops >= t.opsModerate) {
+    rawScore += 14;
+  } else if (player.stats.ops >= t.opsWatch) {
+    rawScore += 7;
   } else {
-    flags.push('WRC_BELOW_THRESHOLD');
+    flags.push('OPS_BELOW_THRESHOLD');
+  }
+  // ISO (max 12) — uses locally derived value (slg - avg), never mutates player
+  if (iso >= t.isoStrongBuy) {
+    rawScore += 12;
+  } else if (iso >= t.isoModerate) {
+    rawScore += 8;
+  } else if (iso >= t.isoWatch) {
+    rawScore += 4;
+  } else {
+    flags.push('ISO_BELOW_THRESHOLD');
+  }
+  // OBP (max 8)
+  if (player.stats.obp >= t.obpStrongBuy) {
+    rawScore += 8;
+  } else if (player.stats.obp >= t.obpModerate) {
+    rawScore += 5;
   }
 
   // Step 5 — Power Profile Score (XBH/H%)
-  if (player.stats.xbhPct >= t.xbhPctElite) {
+  const xbhPct = player.stats.xbhPct;
+  if (xbhPct !== null && xbhPct >= t.xbhPctElite) {
     rawScore += 20;
-  } else if (player.stats.xbhPct >= t.xbhPctMin) {
+  } else if (xbhPct !== null && xbhPct >= t.xbhPctMin) {
     rawScore += 12;
-  } else if (player.stats.xbhPct >= t.xbhPctLow) {
+  } else if (xbhPct !== null && xbhPct >= t.xbhPctLow) {
     rawScore += 6;
   } else {
     flags.push('WEAK_POWER_PROFILE');

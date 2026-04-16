@@ -6,11 +6,24 @@ export type MiLBLevel = 'R' | 'A' | 'A+' | 'AA' | 'AAA';
 export interface PlayerStats {
   pa: number;
   ab: number;
-  wrcPlus: number;
-  kPct: number;
-  bbPct: number;
-  bbKRatio: number;
-  xbhPct: number;
+  hits: number;
+  doubles: number;
+  triples: number;
+  homeRuns: number;
+  strikeOuts: number;
+  baseOnBalls: number;
+  obp: number;                       // onBasePercentage (provided by API)
+  slg: number;                       // sluggingPercentage (provided by API)
+  ops: number;                       // ops (provided by API)
+
+  // Derived fields — calculated during normalization, not from API directly
+  bbPct: number;                     // baseOnBalls / pa
+  kPct: number;                      // strikeOuts / pa
+  bbKRatio: number;                  // bbPct / kPct
+  xbhPct: number | null;             // (doubles + triples + homeRuns) / hits
+  iso: number;                       // sluggingPercentage - battingAverage
+
+  // Optional Statcast fields — unavailable from MLB Stats API for most MiLB players
   katoh?: number;
   exitVelo?: number;
   hardContactPct?: number;
@@ -25,6 +38,7 @@ export interface Player {
   isTwoWay: boolean;
   position: 'C' | '1B' | '2B' | '3B' | 'SS' | 'OF' | 'DH' | 'P';
   stats: PlayerStats;
+  flags: string[];                   // scraper-level flags (e.g. POSITION_UNVERIFIED)
 }
 
 export interface PlayerScore {
@@ -97,15 +111,24 @@ export interface CompositeScore {
 export interface ScoringThresholds {
   minPA: number;
   kPctMax: number;
-  wrcPlusStrongBuy: number;
-  wrcPlusModerate: number;
-  wrcPlusWatch: number;
-  xbhPctMin: number;
+  // Composite offensive proxy thresholds
+  opsStrongBuy: number;
+  opsModerate: number;
+  opsWatch: number;
+  isoStrongBuy: number;
+  isoModerate: number;
+  isoWatch: number;
+  obpStrongBuy: number;
+  obpModerate: number;
+  // Power profile (XBH%) — decimal ratios
   xbhPctElite: number;
+  xbhPctMin: number;
   xbhPctLow: number;
-  bbKRatioMin: number;
+  // Plate discipline (BB/K)
   bbKRatioElite: number;
+  bbKRatioMin: number;
   bbKRatioLow: number;
+  // KATOH / Statcast
   katohElite: number;
   katohModerate: number;
   katohLow: number;
@@ -113,6 +136,7 @@ export interface ScoringThresholds {
   exitVeloMin: number;
   hardContactElite: number;
   hardContactMin: number;
+  // Composite weights and tables
   playerScoreWeight: number;
   cardScoreWeight: number;
   sentimentScoreWeight: number;
