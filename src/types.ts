@@ -134,6 +134,20 @@ export interface CompositeScore {
   percentileContext?: PercentileContext;
 }
 
+export interface CardMarketData {
+  cardFound:        boolean;
+  pricingAvailable: boolean;
+  cardName:         string | null;
+  cardId:           string | null;
+  avgPrice:         number;
+  recentAvg:        number;
+  trendDirection:   'rising' | 'flat' | 'falling';
+  trendConfidence:  'high' | 'medium' | 'low';
+  budgetFlag:       boolean;
+  compCount:        number;
+  rawResponse?:     unknown;
+}
+
 export interface ScoringThresholds {
   minPA: number;
   kPctMax: number;

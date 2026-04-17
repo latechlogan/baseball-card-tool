@@ -17,6 +17,18 @@ An AI-powered pipeline that identifies high-upside minor league prospect cards t
 - [ ] **Chunk 11** — Confidence interval weighting and PA tier adjustments
 - [ ] **Chunk 12** — Full integration testing + calibration validation
 
+## Environment Setup
+
+Before running the card market layer, set your CardSight AI API key:
+
+```bash
+cp .env.example .env   # or create .env manually
+# then edit .env and set:
+CARDSIGHT_API_KEY=your_key_here
+```
+
+The `CARDSIGHT_API_KEY` environment variable must be set before running any command that invokes the card market layer.
+
 ## Running
 
 ```bash
