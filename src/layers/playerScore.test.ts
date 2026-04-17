@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { scorePlayer, getPAConfidenceTier, getAgeVsLevelDelta, applyHardFilters } from './playerScore.js';
 import { getUserConfig } from '../config.js';
-import type { Player, PlayerStats } from '../types.js';
+import type { Player, PlayerStats, PercentileContext } from '../types.js';
 
 const config = getUserConfig();
 
@@ -37,18 +37,31 @@ function makePlayer(overrides: Omit<Partial<Player>, 'stats'> & { stats?: Partia
   };
 }
 
+function makeContext(overrides: Partial<PercentileContext> = {}): PercentileContext {
+  return {
+    isoPercentile:    0.70,
+    obpPercentile:    0.70,
+    opsPercentile:    0.70,
+    kPctPercentile:   0.75,
+    bbPctPercentile:  0.60,
+    xbhPctPercentile: 0.65,
+    ...overrides,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Test 1 — Elite prospect
-// Expected: eligible, high confidence, score in 85–100 range
+// Expected: eligible, high confidence, score in 75–100 range, elite flags
 //
-// Scoring breakdown (PA 290 → high, ×1.0):
+// Scoring breakdown (PA 290 → high, ×1.0, A+ levelMult=0.90):
 //   age delta (20-18=2)    → +20
-//   OPS 0.957 ≥ 0.900      → +20
-//   ISO = 0.565-74/240     →  0.257 ≥ 0.180 → +12
-//   OBP 0.392 ≥ 0.380      →  +8
-//   xbhPct 0.459 ≥ 0.45    → +20
-//   bbKRatio 1.128 ≥ 1.0   → +15
-//   raw 95 × 1.0 = 95 → round(95/98×100) = 97
+//   opsPoints  0.90×12×0.90 = 9.72
+//   isoPoints  0.92×12×0.90 = 9.936
+//   obpPoints  0.70× 8×0.90 = 5.04
+//   xbhPoints  0.88× 5×0.90 = 3.96
+//   bbPoints   0.60× 3×0.90 = 1.62
+//   percentile = 30.276 → min(40,30.276)
+//   raw = 50.276 × 1.0 → score = round(50.276/66×100) = 76
 // ---------------------------------------------------------------------------
 test('elite prospect — young for level, elite stats, high PA', () => {
   const player = makePlayer({
@@ -62,27 +75,28 @@ test('elite prospect — young for level, elite stats, high PA', () => {
     },
   });
 
-  const result = scorePlayer(player, config);
+  const result = scorePlayer(player, config, makeContext({ isoPercentile: 0.92, opsPercentile: 0.90, xbhPctPercentile: 0.88 }));
 
   assert.equal(result.eligible, true);
   assert.equal(result.confidence, 'high');
-  assert.ok(result.score >= 85 && result.score <= 100, `score ${result.score} not in 85–100`);
-  assert.equal(result.score, 97);
+  assert.ok(result.score >= 75 && result.score <= 100, `score ${result.score} not in 75–100`);
+  assert.ok(result.flags.includes('ELITE_ISO_FOR_LEVEL'), 'expected ELITE_ISO_FOR_LEVEL');
+  assert.ok(result.flags.includes('ELITE_OPS_FOR_LEVEL'), 'expected ELITE_OPS_FOR_LEVEL');
   assert.ok(!result.flags.includes('OLD_FOR_LEVEL'));
 });
 
 // ---------------------------------------------------------------------------
 // Test 2 — Solid watch-list prospect
-// Expected: eligible, high confidence, score in 40–60 range
+// Expected: eligible, high confidence, score in 35–55 range
 //
-// Scoring breakdown (PA 224 → high, ×1.0):
+// Scoring breakdown (PA 224 → high, ×1.0, AA levelMult=1.00):
 //   age delta (21-21=0)    →   0
-//   OPS 0.829 ≥ 0.825      → +14
-//   ISO = 0.474-52/190     →  0.200 ≥ 0.180 → +12
-//   OBP 0.355 ≥ 0.340      →  +5
-//   xbhPct 0.404 ≥ 0.37    → +14
-//   bbKRatio 0.791 ≥ 0.75  → +10
-//   raw 55 × 1.0 = 55 → round(55/98×100) = 56
+//   opsPoints  0.52×12×1.00 =  6.24
+//   isoPoints  0.55×12×1.00 =  6.60
+//   obpPoints  0.70× 8×1.00 =  5.60
+//   xbhPoints  0.65× 5×1.00 =  3.25
+//   bbPoints   0.60× 3×1.00 =  1.80
+//   percentile = 23.49 → raw = 23.49 × 1.0 → score = round(23.49/66×100) = 36
 // ---------------------------------------------------------------------------
 test('solid watch-list prospect — age-appropriate, decent stats, high PA', () => {
   const player = makePlayer({
@@ -96,25 +110,25 @@ test('solid watch-list prospect — age-appropriate, decent stats, high PA', () 
     },
   });
 
-  const result = scorePlayer(player, config);
+  const result = scorePlayer(player, config, makeContext({ isoPercentile: 0.55, opsPercentile: 0.52 }));
 
   assert.equal(result.eligible, true);
   assert.equal(result.confidence, 'high');
-  assert.ok(result.score >= 40 && result.score <= 60, `score ${result.score} not in 40–60`);
+  assert.ok(result.score >= 35 && result.score <= 55, `score ${result.score} not in 35–55`);
 });
 
 // ---------------------------------------------------------------------------
 // Test 3 — Small sample flier
-// Expected: eligible, LOW confidence, flag SMALL_SAMPLE_WATCH_ONLY
+// Expected: eligible, LOW confidence, flag SMALL_SAMPLE_WATCH_ONLY, score in 25–40
 //
-// Scoring breakdown (PA 134 → low, ×0.5):
+// Scoring breakdown (PA 134 → low, ×0.5, A levelMult=0.80):
 //   age delta (19-17=2)    → +20
-//   OPS 0.931 ≥ 0.900      → +20
-//   ISO = 0.543-33/110     →  0.243 ≥ 0.180 → +12
-//   OBP 0.388 ≥ 0.380      →  +8
-//   xbhPct 0.424 ≥ 0.42    → +20
-//   bbKRatio 0.913 ≥ 0.75  → +10
-//   raw 90 × 0.5 = 45 → round(45/98×100) = 46
+//   opsPoints  0.88×12×0.80 = 8.448
+//   isoPoints  0.85×12×0.80 = 8.16
+//   obpPoints  0.70× 8×0.80 = 4.48
+//   xbhPoints  0.65× 5×0.80 = 2.60
+//   bbPoints   0.60× 3×0.80 = 1.44
+//   percentile = 25.128 → raw = 45.128 → weighted = 22.6 → score = round(22.6/66×100) = 34
 // ---------------------------------------------------------------------------
 test('small sample flier — great profile but low PA', () => {
   const player = makePlayer({
@@ -129,11 +143,12 @@ test('small sample flier — great profile but low PA', () => {
     },
   });
 
-  const result = scorePlayer(player, config);
+  const result = scorePlayer(player, config, makeContext({ isoPercentile: 0.85, opsPercentile: 0.88 }));
 
   assert.equal(result.eligible, true);
   assert.equal(result.confidence, 'low');
   assert.ok(result.flags.includes('SMALL_SAMPLE_WATCH_ONLY'));
+  assert.ok(result.score >= 25 && result.score <= 40, `score ${result.score} not in 25–40`);
 });
 
 // ---------------------------------------------------------------------------
@@ -153,7 +168,7 @@ test('strikeout concern — K% exceeds hard cap', () => {
     },
   });
 
-  const result = scorePlayer(player, config);
+  const result = scorePlayer(player, config, makeContext());
 
   assert.equal(result.eligible, false);
   assert.equal(result.score, 0);
@@ -171,7 +186,7 @@ test('pitcher (non-two-way) — excluded immediately', () => {
     isTwoWay: false,
   });
 
-  const result = scorePlayer(player, config);
+  const result = scorePlayer(player, config, makeContext());
 
   assert.equal(result.eligible, false);
   assert.equal(result.score, 0);
@@ -189,7 +204,7 @@ test('two-way player — ineligible with manual review flag, not pitcher exclude
     isTwoWay: true,
   });
 
-  const result = scorePlayer(player, config);
+  const result = scorePlayer(player, config, makeContext());
 
   assert.equal(result.eligible, false);
   assert.equal(result.score, 0);
@@ -201,11 +216,9 @@ test('two-way player — ineligible with manual review flag, not pitcher exclude
 // Test 7 — Old for level
 // Expected: eligible, flag OLD_FOR_LEVEL, lower score than age-appropriate peer
 //
-// Shared stats → base_raw=55 (OPS 0.844→14, ISO 0.209≥0.180→12, OBP 0.352→5,
-//   xbhPct 0.415≥0.37→14, bbKRatio 0.821→10)
-//
-// Old player (age 24, A+, delta=20-24=-4 ≤ -2): raw=55-20=35 → score=36
-// Age-appropriate (age 20, A+, delta=0):         raw=55     → score=56
+// Both players use makeContext() defaults (iso=0.70, ops=0.70, etc.)
+// Old player (age 24, A+, delta=20-24=-4 ≤ -2): age score = -20
+// Age-appropriate (age 20, A+, delta=0):         age score =   0
 // ---------------------------------------------------------------------------
 test('old for level — age 24 at A+, penalized age score and flag applied', () => {
   const sharedStats = {
@@ -215,11 +228,11 @@ test('old for level — age 24 at A+, penalized age score and flag applied', () 
     bbPct: 0.145, kPct: 0.177, bbKRatio: 0.821, xbhPct: 0.415, iso: 0.208,
   };
 
-  const oldPlayer = makePlayer({ age: 24, level: 'A+', stats: sharedStats });
+  const oldPlayer  = makePlayer({ age: 24, level: 'A+', stats: sharedStats });
   const peerPlayer = makePlayer({ age: 20, level: 'A+', stats: sharedStats });
 
-  const oldResult = scorePlayer(oldPlayer, config);
-  const peerResult = scorePlayer(peerPlayer, config);
+  const oldResult  = scorePlayer(oldPlayer,  config, makeContext());
+  const peerResult = scorePlayer(peerPlayer, config, makeContext());
 
   assert.equal(oldResult.eligible, true);
   assert.equal(oldResult.confidence, 'high');

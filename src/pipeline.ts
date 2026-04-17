@@ -2,8 +2,9 @@ import { writeFileSync, mkdirSync } from 'fs'
 import { getUserConfig } from './config.js'
 import { fetchMiLBHitters } from './scrapers/mlbStatsApi.js'
 import { scorePlayer } from './layers/playerScore.js'
+import { buildPeerGroups, getPercentileContext } from './layers/peerGroups.js'
 import { cache } from './cache.js'
-import type { UserConfig, Player, PlayerScore, CompositeScore } from './types.js'
+import type { UserConfig, Player, PlayerScore, CompositeScore, PercentileContext } from './types.js'
 
 // Parse season from CLI args: npm run pipeline -- --season 2025
 // Falls back to current year if not provided
@@ -31,8 +32,8 @@ if (forceFresh) {
 function buildPartialComposite(
   player: Player,
   playerScore: PlayerScore,
-  config: UserConfig,
-  rank: number
+  rank: number,
+  context: PercentileContext
 ): CompositeScore {
   return {
     player,
@@ -53,6 +54,7 @@ function buildPartialComposite(
     finalScore: playerScore.score,
     timingSignal: 'WATCH',
     rankedPosition: rank,
+    percentileContext: context,
   }
 }
 
@@ -62,11 +64,16 @@ export async function runPipeline(config: UserConfig): Promise<CompositeScore[]>
   const players = await fetchMiLBHitters(SEASON, config)
   console.log(`[pipeline] ${players.length} age-eligible players fetched`)
 
-  // Step 2 — Score
-  const scoredPlayers = players.map(player => ({
-    player,
-    playerScore: scorePlayer(player, config),
-  }))
+  // Step 2a — Build peer groups from full player pool
+  const peerGroups = buildPeerGroups(players)
+  console.log('[pipeline] peer groups built:',
+    peerGroups.map(g => `${g.level}: ${g.players.length} peers`).join(' | '))
+
+  // Step 2b — Score each player using their peer context
+  const scoredPlayers = players.map(player => {
+    const context = getPercentileContext(player, peerGroups)
+    return { player, playerScore: scorePlayer(player, config, context), context }
+  })
 
   const eligible   = scoredPlayers.filter(p => p.playerScore.eligible)
   const ineligible = scoredPlayers.filter(p => !p.playerScore.eligible)
@@ -84,8 +91,8 @@ export async function runPipeline(config: UserConfig): Promise<CompositeScore[]>
   // Step 3 — Build composite scores
   const sorted = [...eligible].sort((a, b) => b.playerScore.score - a.playerScore.score)
 
-  const composites: CompositeScore[] = sorted.map(({ player, playerScore }, i) =>
-    buildPartialComposite(player, playerScore, config, i + 1)
+  const composites: CompositeScore[] = sorted.map(({ player, playerScore, context }, i) =>
+    buildPartialComposite(player, playerScore, i + 1, context)
   )
 
   // Step 4 — Write output files
@@ -124,9 +131,12 @@ export async function runPipeline(config: UserConfig): Promise<CompositeScore[]>
       `   Score: ${s.score} | Confidence: ${s.confidence}` +
       ` | OPS: ${st.ops.toFixed(3)} | ISO: ${st.iso.toFixed(3)}` +
       ` | OBP: ${st.obp.toFixed(3)} | K%: ${(st.kPct * 100).toFixed(1)}%` +
-      ` | BB/K: ${st.bbKRatio.toFixed(2)} | PA: ${st.pa}`
+      ` | PA: ${st.pa}`
     )
-    if (s.flags.length) console.log(`   Flags: ${s.flags.join(', ')}`)
+    const gemFlags = s.flags.filter(f => f.startsWith('ELITE_') || f === 'MULTI_TOOL_PROFILE')
+    if (gemFlags.length) console.log(`   ⭐ ${gemFlags.join(', ')}`)
+    const otherFlags = s.flags.filter(f => !f.startsWith('ELITE_') && f !== 'MULTI_TOOL_PROFILE')
+    if (otherFlags.length) console.log(`   Flags: ${otherFlags.join(', ')}`)
     console.log()
   })
 

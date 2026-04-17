@@ -48,6 +48,28 @@ export interface PlayerScore {
   eligible: boolean;
 }
 
+export interface LevelPeerGroup {
+  level: string
+  players: Player[]
+  percentiles: {
+    iso:    number[]
+    obp:    number[]
+    ops:    number[]
+    kPct:   number[]
+    bbPct:  number[]
+    xbhPct: number[]
+  }
+}
+
+export interface PercentileContext {
+  isoPercentile:    number
+  obpPercentile:    number
+  opsPercentile:    number
+  kPctPercentile:   number   // inverted: lower K% = higher percentile
+  bbPctPercentile:  number   // 0.0 at A/A+; computed at AA/AAA
+  xbhPctPercentile: number
+}
+
 export type CardType = 'chrome' | 'refractor' | 'base' | 'auto';
 
 export interface CardTarget {
@@ -106,29 +128,13 @@ export interface CompositeScore {
   finalScore: number;
   timingSignal: 'BUY_NOW' | 'WATCH' | 'AVOID';
   rankedPosition: number;
+  percentileContext?: PercentileContext;
 }
 
 export interface ScoringThresholds {
   minPA: number;
   kPctMax: number;
-  // Composite offensive proxy thresholds
-  opsStrongBuy: number;
-  opsModerate: number;
-  opsWatch: number;
-  isoStrongBuy: number;
-  isoModerate: number;
-  isoWatch: number;
-  obpStrongBuy: number;
-  obpModerate: number;
-  // Power profile (XBH%) — decimal ratios
-  xbhPctElite: number;
-  xbhPctMin: number;
-  xbhPctLow: number;
-  // Plate discipline (BB/K)
-  bbKRatioElite: number;
-  bbKRatioMin: number;
-  bbKRatioLow: number;
-  // Statcast
+  // Statcast (optional bonus — Step 7)
   exitVeloElite: number;
   exitVeloMin: number;
   hardContactElite: number;

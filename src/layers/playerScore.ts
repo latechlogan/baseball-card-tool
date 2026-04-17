@@ -1,8 +1,14 @@
-import { Player, PlayerScore, UserConfig } from '../types.js';
+import { Player, PlayerScore, UserConfig, PercentileContext } from '../types.js';
 
-// The maximum achievable raw score before PA weighting, used for normalization.
-// Breakdown: age(20) + composite(40) + power(20) + discipline(15) + exitVelo(3) = 98
-const MAX_RAW_SCORE = 98;
+// Max achievable raw score: age(20) + percentile composite(40) + exitVelo/hardContact(6) = 66
+const MAX_RAW_SCORE = 66;
+
+const LEVEL_MULTIPLIER: Record<string, number> = {
+  'A':   0.80,
+  'A+':  0.90,
+  'AA':  1.00,
+  'AAA': 1.05,
+};
 
 /**
  * Run all hard filters against a player. Returns whether the player passed and
@@ -64,15 +70,15 @@ export function getAgeVsLevelDelta(player: Player, config: UserConfig): number {
 }
 
 /**
- * Score a player's statistical profile against the configured thresholds.
+ * Score a player's statistical profile using percentile context from peer groups.
  * Returns a PlayerScore with a 0–100 normalized value, confidence level,
  * accumulated flags, and eligibility. Never throws — bad input returns ineligible.
  */
-export function scorePlayer(player: Player, config: UserConfig): PlayerScore {
-  // Derive ISO — slg minus batting average. ab===0 guard prevents division by zero.
-  const avg = player.stats.ab > 0 ? (player.stats.hits / player.stats.ab) : 0;
-  const iso = player.stats.slg - avg;
-
+export function scorePlayer(
+  player: Player,
+  config: UserConfig,
+  context: PercentileContext
+): PlayerScore {
   // Step 1 — Hard Filters
   const { passed, flags: hardFilterFlags } = applyHardFilters(player, config);
   if (!passed) {
@@ -104,60 +110,40 @@ export function scorePlayer(player: Player, config: UserConfig): PlayerScore {
     flags.push('OLD_FOR_LEVEL');
   }
 
-  // Step 4 — Composite Offensive Score (OPS + ISO + OBP, max 40 pts)
-  // OPS (max 20)
-  if (player.stats.ops >= t.opsStrongBuy) {
-    rawScore += 20;
-  } else if (player.stats.ops >= t.opsModerate) {
-    rawScore += 14;
-  } else if (player.stats.ops >= t.opsWatch) {
-    rawScore += 7;
-  } else {
-    flags.push('OPS_BELOW_THRESHOLD');
-  }
-  // ISO (max 12) — uses locally derived value (slg - avg), never mutates player
-  if (iso >= t.isoStrongBuy) {
-    rawScore += 12;
-  } else if (iso >= t.isoModerate) {
-    rawScore += 8;
-  } else if (iso >= t.isoWatch) {
-    rawScore += 4;
-  } else {
-    flags.push('ISO_BELOW_THRESHOLD');
-  }
-  // OBP (max 8)
-  if (player.stats.obp >= t.obpStrongBuy) {
-    rawScore += 8;
-  } else if (player.stats.obp >= t.obpModerate) {
-    rawScore += 5;
-  }
+  // Step 4 — Percentile Composite Score (max 40 points)
+  const levelMult = LEVEL_MULTIPLIER[player.level] ?? 1.0;
 
-  // Step 5 — Power Profile Score (XBH/H%, max 20 pts)
-  const xbhPct = player.stats.xbhPct;
-  if (xbhPct !== null && xbhPct >= 0.42) {
-    rawScore += 20;
-  } else if (xbhPct !== null && xbhPct >= 0.37) {
-    rawScore += 14;
-  } else if (xbhPct !== null && xbhPct >= 0.32) {
-    rawScore += 8;
-  } else if (xbhPct !== null && xbhPct >= 0.28) {
-    rawScore += 3;
-  } else {
-    flags.push('WEAK_POWER_PROFILE');
-  }
+  const opsPoints  = context.opsPercentile    * 12 * levelMult;
+  const isoPoints  = context.isoPercentile    * 12 * levelMult;
+  const obpPoints  = context.obpPercentile    *  8 * levelMult;
+  const xbhPoints  = context.xbhPctPercentile *  5 * levelMult;
+  const bbPoints   = context.bbPctPercentile  *  3 * levelMult;
 
-  // Step 6 — Plate Discipline Score (BB/K ratio)
-  if (player.stats.bbKRatio >= t.bbKRatioElite) {
-    rawScore += 15;
-  } else if (player.stats.bbKRatio >= t.bbKRatioMin) {
-    rawScore += 10;
-  } else if (player.stats.bbKRatio >= t.bbKRatioLow) {
-    rawScore += 5;
-  } else {
-    flags.push('POOR_PLATE_DISCIPLINE');
-  }
+  const percentileScore = opsPoints + isoPoints + obpPoints + xbhPoints + bbPoints;
+  rawScore += Math.min(40, percentileScore);
 
-  // Step 7 — Exit Velocity / Hard Contact Bonus (optional, additive)
+  // Bottom-quartile flags
+  if (context.isoPercentile    < 0.25) flags.push('ISO_BOTTOM_QUARTILE');
+  if (context.opsPercentile    < 0.25) flags.push('OPS_BOTTOM_QUARTILE');
+  if (context.xbhPctPercentile < 0.25) flags.push('WEAK_POWER_PROFILE');
+
+  // Elite performer flags — hidden gem signals
+  if (context.isoPercentile    >= 0.80) flags.push('ELITE_ISO_FOR_LEVEL');
+  if (context.opsPercentile    >= 0.80) flags.push('ELITE_OPS_FOR_LEVEL');
+  if (context.kPctPercentile   >= 0.80) flags.push('ELITE_CONTACT_FOR_LEVEL');
+  if (context.xbhPctPercentile >= 0.80) flags.push('ELITE_POWER_PROFILE');
+
+  // Multi-tool: above 60th percentile in 3+ metrics
+  const metricsAbove60 = [
+    context.isoPercentile,
+    context.obpPercentile,
+    context.opsPercentile,
+    context.xbhPctPercentile,
+    context.kPctPercentile,
+  ].filter(p => p >= 0.60).length;
+  if (metricsAbove60 >= 3) flags.push('MULTI_TOOL_PROFILE');
+
+  // Step 5 — Exit Velocity / Hard Contact Bonus (optional, additive)
   if (player.stats.exitVelo !== undefined) {
     if (player.stats.exitVelo >= t.exitVeloElite) {
       rawScore += 3;
@@ -173,10 +159,10 @@ export function scorePlayer(player: Player, config: UserConfig): PlayerScore {
     }
   }
 
-  // Step 8 — Apply PA Confidence Weight (rounded to one decimal place)
+  // Step 6 — Apply PA Confidence Weight (rounded to one decimal place)
   const weightedScore = Math.round(rawScore * multiplier * 10) / 10;
 
-  // Step 9 — Normalize to 0–100
+  // Step 7 — Normalize to 0–100
   const score = Math.max(
     0,
     Math.min(100, Math.round((weightedScore / MAX_RAW_SCORE) * 100))
