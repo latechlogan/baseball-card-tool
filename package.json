@@ -4,13 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "pipeline":        "tsx src/pipeline.ts",
-    "pipeline:fresh":  "tsx src/pipeline.ts --fresh",
-    "pipeline:2025":   "tsx src/pipeline.ts --season 2025",
-    "pipeline:2026":   "tsx src/pipeline.ts --season 2026",
+    "pipeline": "tsx src/pipeline.ts",
+    "pipeline:fresh": "tsx src/pipeline.ts --fresh",
+    "pipeline:2025": "tsx src/pipeline.ts --season 2025",
+    "pipeline:2026": "tsx src/pipeline.ts --season 2026",
     "dev": "tsx watch src/pipeline.ts",
     "test": "tsx --test src/**/*.test.ts",
-    "scraper:mlb": "tsx src/scrapers/mlbStatsApi.manual.ts"
+    "scraper:mlb": "tsx src/scrapers/mlbStatsApi.manual.ts",
+    "scraper:ebay": "tsx src/scrapers/ebay.manual.ts"
   },
   "repository": {
     "type": "git",
@@ -25,8 +26,13 @@
   },
   "homepage": "https://github.com/latechlogan/baseball-card-tool#readme",
   "devDependencies": {
+    "@types/cheerio": "^0.22.35",
     "@types/node": "^25.6.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "playwright": "^1.59.1"
   }
 }

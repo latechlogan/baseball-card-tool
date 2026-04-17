@@ -82,6 +82,14 @@ export interface CardTarget {
   cardType: CardType;
 }
 
+export interface CardSearchFilters {
+  setName?: string;
+  parallel?: string;
+  year?: number;
+  isAuto?: boolean;
+  isFirstBowman?: boolean;
+}
+
 export interface EbaySaleRecord {
   price: number;
   date: string;
