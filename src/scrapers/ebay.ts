@@ -15,11 +15,11 @@ export class EbayScraperError extends Error {
 
 function buildSearchQuery(playerName: string, filters: CardSearchFilters): string {
   const parts = [playerName];
-  if (filters.year)           parts.push(String(filters.year));
-  if (filters.setName)        parts.push(filters.setName);
-  if (filters.parallel)       parts.push(filters.parallel);
-  if (filters.isAuto)         parts.push('auto');
-  if (filters.isFirstBowman)  parts.push('1st');
+  if (filters.year)                      parts.push(String(filters.year));
+  parts.push(filters.setName ?? 'Bowman Chrome');
+  if (filters.isFirstBowman ?? true)     parts.push('1st');
+  if (filters.parallel)                  parts.push(filters.parallel);
+  if (filters.isAuto)                    parts.push('auto');
   return parts.join(' ');
 }
 
@@ -73,8 +73,37 @@ function detectTrend(comps: EbaySaleRecord[]): 'rising' | 'flat' | 'falling' {
   return 'flat';
 }
 
+function detectParallelType(title: string): string {
+  const t = title.toLowerCase();
+  if (t.includes('auto') || t.includes('autograph')) return 'auto';
+  const numberedMatch = t.match(/\/(\d+)/);
+  if (numberedMatch) return `numbered-${numberedMatch[1]}`;
+  if (t.includes('sapphire'))  return 'sapphire';
+  if (t.includes('gold'))      return 'gold';
+  if (t.includes('orange'))    return 'orange';
+  if (t.includes('blue'))      return 'blue';
+  if (t.includes('green'))     return 'green';
+  if (t.includes('mojo'))      return 'mojo';
+  if (t.includes('refractor')) return 'refractor';
+  return 'base';
+}
+
+function trendConfidence(compCount: number): 'high' | 'medium' | 'low' {
+  if (compCount >= 15) return 'high';
+  if (compCount >= 6)  return 'medium';
+  return 'low';
+}
+
 function emptyComps(): EbayComps {
-  return { comps: [], trendDirection: 'flat', avgPrice: 0, recentAvg: 0 };
+  return {
+    comps: [],
+    trendDirection: 'flat',
+    avgPrice: 0,
+    recentAvg: 0,
+    trendConfidence: 'low',
+    dominantParallelType: 'base',
+    consistencyPct: 100,
+  };
 }
 
 export async function fetchEbayComps(
@@ -167,20 +196,46 @@ export async function fetchEbayComps(
       return emptyComps();
     }
 
-    const sorted = [...listings].sort((a, b) =>
+    const byParallel = listings.reduce((acc, comp) => {
+      const type = detectParallelType(comp.title);
+      acc[type] = [...(acc[type] ?? []), comp];
+      return acc;
+    }, {} as Record<string, EbaySaleRecord[]>);
+
+    const dominantEntry = Object.entries(byParallel)
+      .sort((a, b) => b[1].length - a[1].length)[0];
+
+    const dominantParallelType = dominantEntry?.[0] ?? 'base';
+    const cleanComps = dominantEntry?.[1] ?? listings;
+
+    const consistencyPct = listings.length > 0
+      ? Math.round((cleanComps.length / listings.length) * 100)
+      : 100;
+
+    if (cleanComps.length < listings.length) {
+      console.log(
+        `[ebay] parallel filter: kept ${cleanComps.length}/${listings.length} listings` +
+        ` (dominant type: ${dominantParallelType}, ${consistencyPct}% consistent)`
+      );
+    }
+
+    const avg = (arr: EbaySaleRecord[]) =>
+      arr.reduce((sum, r) => sum + r.price, 0) / arr.length;
+
+    const sorted = [...cleanComps].sort((a, b) =>
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
     const mid       = Math.floor(sorted.length / 2);
     const recentArr = sorted.slice(0, mid);
 
-    const avg = (arr: EbaySaleRecord[]) =>
-      arr.reduce((sum, r) => sum + r.price, 0) / arr.length;
-
     const result: EbayComps = {
-      comps:          sorted,
-      trendDirection: detectTrend(listings),
-      avgPrice:       avg(listings),
-      recentAvg:      recentArr.length > 0 ? avg(recentArr) : avg(listings),
+      comps:               sorted,
+      trendDirection:      detectTrend(cleanComps),
+      avgPrice:            avg(cleanComps),
+      recentAvg:           recentArr.length > 0 ? avg(recentArr) : avg(cleanComps),
+      trendConfidence:     trendConfidence(cleanComps.length),
+      dominantParallelType,
+      consistencyPct,
     };
 
     cache.set(cacheKey, result);

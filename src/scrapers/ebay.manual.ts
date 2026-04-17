@@ -18,6 +18,10 @@ console.log(`Total comps found: ${comps.comps.length}`);
 console.log(`Avg price: $${comps.avgPrice.toFixed(2)}`);
 console.log(`Recent avg: $${comps.recentAvg.toFixed(2)}`);
 console.log(`Trend: ${comps.trendDirection}`);
+console.log(`Trend confidence:  ${comps.trendConfidence}`);
+console.log(`Dominant parallel: ${comps.dominantParallelType}`);
+console.log(`Consistency:       ${comps.consistencyPct}%`);
+console.log(`Clean comp count:  ${comps.comps.length}`);
 
 if (comps.comps.length > 0) {
   console.log('\nMost recent 5 sales:');

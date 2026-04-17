@@ -99,18 +99,13 @@ export interface EbaySaleRecord {
 }
 
 export interface EbayComps {
-  comps: EbaySaleRecord[];
-  trendDirection: 'rising' | 'flat' | 'falling';
-  avgPrice: number;
-  recentAvg: number;
-}
-
-export interface COMCListing {
-  title: string;
-  askPrice: number;
-  parallel: string;
-  printRun?: number;
-  url: string;
+  comps:                EbaySaleRecord[];
+  trendDirection:       'rising' | 'flat' | 'falling';
+  avgPrice:             number;
+  recentAvg:            number;
+  trendConfidence:      'high' | 'medium' | 'low';
+  dominantParallelType: string;
+  consistencyPct:       number;
 }
 
 export interface CardOpportunityScore {
@@ -158,10 +153,10 @@ export interface ScoringThresholds {
     reducedWeight: number;
     fullWeight: number;
   };
+  parallelMultipliers: Record<string, number>;
 }
 
 export interface UserConfig {
   budgetCeiling: number;
-  comcPremiumFactor: number;
   thresholds: ScoringThresholds;
 }

@@ -14,6 +14,7 @@ const thresholds: ScoringThresholds = {
   sentimentScoreWeight: thresholdsJson.sentimentScoreWeight,
   ageVsLevelTable:      thresholdsJson.ageVsLevelTable,
   paConfidenceTiers:    thresholdsJson.paConfidenceTiers,
+  parallelMultipliers:  thresholdsJson.parallelMultipliers,
 };
 
 /**
@@ -26,7 +27,6 @@ const thresholds: ScoringThresholds = {
 export function getUserConfig(): UserConfig {
   return {
     budgetCeiling: budgetJson.budgetCeiling,
-    comcPremiumFactor: budgetJson.comcPremiumFactor,
     thresholds,
   };
 }
