@@ -8,10 +8,12 @@
     "pipeline:fresh": "tsx src/pipeline.ts --fresh",
     "pipeline:2025": "tsx src/pipeline.ts --season 2025",
     "pipeline:2026": "tsx src/pipeline.ts --season 2026",
+    "pipeline:fast": "tsx src/pipeline.ts --season 2025 --skip-sentiment",
     "dev": "tsx watch src/pipeline.ts",
     "test": "tsx --test src/**/*.test.ts",
     "scraper:mlb": "tsx src/scrapers/mlbStatsApi.manual.ts",
-    "scraper:cards": "tsx src/scrapers/cardSight.manual.ts"
+    "scraper:cards": "tsx src/scrapers/cardSight.manual.ts",
+    "scraper:reddit": "tsx src/scrapers/reddit.manual.ts"
   },
   "repository": {
     "type": "git",

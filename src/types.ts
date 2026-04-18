@@ -126,11 +126,25 @@ export interface CardOpportunityScore {
 
 export type TimingSignal = 'BUY_NOW' | 'WATCH' | 'AVOID';
 
+export interface RedditPost {
+  title:       string;
+  subreddit:   string;
+  score:       number;
+  numComments: number;
+  createdUtc:  number;
+  url:         string;
+}
+
 export interface SentimentScore {
-  chatterLevel: 'low' | 'moderate' | 'high';
-  trend: 'rising' | 'stable' | 'declining';
-  timingSignal: 'BUY_NOW' | 'WATCH' | 'AVOID';
-  summary: string;
+  score:                 number;   // 0–100 derived from chatter + trend
+  chatterLevel:          'low' | 'moderate' | 'high';
+  trend:                 'rising' | 'stable' | 'declining';
+  timingSignal:          'BUY_NOW' | 'WATCH' | 'AVOID';
+  summary:               string;
+  postCount:             number;   // organic posts only
+  commentCount:          number;   // organic posts only
+  mechanicalMentionCount: number;  // daily threads, stats posts, sale listings
+  topPosts:              RedditPost[];  // organic posts only
 }
 
 export interface CompositeScore {
