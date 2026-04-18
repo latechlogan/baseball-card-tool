@@ -73,13 +73,14 @@ export interface PercentileContext {
 export type CardType = 'chrome' | 'refractor' | 'base' | 'auto';
 
 export interface CardTarget {
-  playerName: string;
-  setName: string;
-  year: number;
-  parallel: string;
-  printRun?: number;
+  playerName:    string;
+  setName:       string;
+  year:          number | null;
+  parallel:      string | null;
+  printRun:      number | null;
   isFirstBowman: boolean;
-  cardType: CardType;
+  cardType:      CardType;
+  cardSightId:   string | null;
 }
 
 export interface CardSearchFilters {
@@ -109,12 +110,21 @@ export interface EbayComps {
 }
 
 export interface CardOpportunityScore {
-  score: number; // 0–100
-  recommendedCard: CardTarget | null;
-  roiEstimate: number;
-  flags: string[];
-  budgetFlag: boolean;
+  score:            number;           // 0–100
+  cardFound:        boolean;
+  pricingAvailable: boolean;
+  cardName:         string | null;
+  recommendedCard:  CardTarget | null;
+  avgPrice:         number;
+  recentAvg:        number;
+  trendDirection:   'rising' | 'flat' | 'falling';
+  trendConfidence:  'high' | 'medium' | 'low';
+  roiEstimate:      number;           // multiplier: e.g. 2.1 = expect 2.1x return
+  budgetFlag:       boolean;
+  flags:            string[];
 }
+
+export type TimingSignal = 'BUY_NOW' | 'WATCH' | 'AVOID';
 
 export interface SentimentScore {
   chatterLevel: 'low' | 'moderate' | 'high';
@@ -129,7 +139,7 @@ export interface CompositeScore {
   cardScore: CardOpportunityScore;
   sentimentScore: SentimentScore;
   finalScore: number;
-  timingSignal: 'BUY_NOW' | 'WATCH' | 'AVOID';
+  timingSignal: TimingSignal;
   rankedPosition: number;
   percentileContext?: PercentileContext;
 }

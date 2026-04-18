@@ -220,6 +220,18 @@ export async function fetchCardMarketData(
 
   const { direction: trendDirection, confidence: trendConfidence } = deriveTrend(prices)
 
+  if (avgPrice === 0 && recentAvg === 0) {
+    const result = emptyResult({
+      cardFound: true,
+      pricingAvailable: false,
+      cardName: `${anchorCard.releaseYear} ${anchorCard.releaseName} ${anchorCard.name}`,
+      cardId: anchorCard.id,
+      rawResponse: pricingData,
+    })
+    cache.set(cacheKey, result)
+    return result
+  }
+
   const budgetFlag = recentAvg > config.budgetCeiling
 
   const result: CardMarketData = {

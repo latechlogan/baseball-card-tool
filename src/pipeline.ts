@@ -3,8 +3,13 @@ import { getUserConfig } from './config.js'
 import { fetchMiLBHitters } from './scrapers/mlbStatsApi.js'
 import { scorePlayer } from './layers/playerScore.js'
 import { buildPeerGroups, getPercentileContext } from './layers/peerGroups.js'
+import { fetchCardMarketData } from './scrapers/cardSight.js'
+import { scoreCard } from './layers/cardScore.js'
 import { cache } from './cache.js'
-import type { UserConfig, Player, PlayerScore, CompositeScore, PercentileContext } from './types.js'
+import type {
+  UserConfig, Player, PlayerScore, CardOpportunityScore,
+  CompositeScore, PercentileContext, TimingSignal,
+} from './types.js'
 
 // Parse season from CLI args: npm run pipeline -- --season 2025
 // Falls back to current year if not provided
@@ -32,33 +37,45 @@ if (forceFresh) {
 function buildPartialComposite(
   player: Player,
   playerScore: PlayerScore,
+  cardScore: CardOpportunityScore,
+  config: UserConfig,
   rank: number,
-  context: PercentileContext
+  context: PercentileContext,
 ): CompositeScore {
+  const twoLayerScore = Math.round(
+    (playerScore.score * config.thresholds.playerScoreWeight +
+     cardScore.score   * config.thresholds.cardScoreWeight) /
+    (config.thresholds.playerScoreWeight + config.thresholds.cardScoreWeight),
+  )
+
+  const timingSignal: TimingSignal =
+    cardScore.flags.includes('CARD_NOT_FOUND')                            ? 'WATCH'    :
+    cardScore.flags.includes('EXCEEDS_BUDGET')                            ? 'WATCH'    :
+    cardScore.flags.includes('TREND_FALLING') &&
+    cardScore.trendConfidence === 'high'                                  ? 'AVOID'    :
+    cardScore.score >= 60 && playerScore.score >= 50                      ? 'BUY_NOW'  :
+    'WATCH'
+
   return {
     player,
     playerScore,
-    cardScore: {
-      score: 0,
-      recommendedCard: null,
-      roiEstimate: 0,
-      flags: ['CARD_SCORE_NOT_YET_IMPLEMENTED'],
-      budgetFlag: false,
-    },
+    cardScore,
     sentimentScore: {
       chatterLevel: 'low',
       trend: 'stable',
       timingSignal: 'WATCH',
       summary: 'Sentiment scoring not yet implemented.',
     },
-    finalScore: playerScore.score,
-    timingSignal: 'WATCH',
+    finalScore: twoLayerScore,
+    timingSignal,
     rankedPosition: rank,
     percentileContext: context,
   }
 }
 
 export async function runPipeline(config: UserConfig): Promise<CompositeScore[]> {
+  const startTime = Date.now()
+
   // Step 1 — Fetch
   console.log('[pipeline] fetching MiLB hitters...')
   const players = await fetchMiLBHitters(SEASON, config)
@@ -88,19 +105,42 @@ export async function runPipeline(config: UserConfig): Promise<CompositeScore[]>
   }, {} as Record<string, number>)
   console.log('[pipeline] ineligible flag breakdown:', flagCounts)
 
-  // Step 3 — Build composite scores
-  const sorted = [...eligible].sort((a, b) => b.playerScore.score - a.playerScore.score)
+  // Step 3 — Fetch card market data (eligible players only, sequential with delay)
+  console.log('[pipeline] fetching card market data for eligible players...')
 
-  const composites: CompositeScore[] = sorted.map(({ player, playerScore, context }, i) =>
-    buildPartialComposite(player, playerScore, i + 1, context)
+  const eligibleWithCards: Array<{
+    player: Player
+    playerScore: PlayerScore
+    context: PercentileContext
+    marketData: Awaited<ReturnType<typeof fetchCardMarketData>>
+    cardScore: CardOpportunityScore
+  }> = []
+
+  for (const scored of eligible) {
+    const marketData = await fetchCardMarketData(scored.player.name, config)
+    const cardScore  = scoreCard(marketData, scored.playerScore, config, scored.player.name)
+    eligibleWithCards.push({ ...scored, marketData, cardScore })
+    await new Promise(resolve => setTimeout(resolve, 350))
+  }
+
+  console.log(
+    `[pipeline] card market data complete — ` +
+    `${eligibleWithCards.filter(p => p.marketData.cardFound).length} cards found, ` +
+    `${eligibleWithCards.filter(p => p.marketData.pricingAvailable).length} with pricing`,
   )
 
-  // Step 4 — Write output files
+  // Step 4 — Build composites sorted by two-layer score
+  const composites: CompositeScore[] = eligibleWithCards
+    .map(p => buildPartialComposite(p.player, p.playerScore, p.cardScore, config, 0, p.context))
+    .sort((a, b) => b.finalScore - a.finalScore)
+    .map((c, i) => ({ ...c, rankedPosition: i + 1 }))
+
+  // Step 5 — Write output files
   mkdirSync('./data/output', { recursive: true })
 
   writeFileSync(
     './data/output/scored-prospects.json',
-    JSON.stringify(composites, null, 2)
+    JSON.stringify(composites, null, 2),
   )
   console.log(`[pipeline] wrote ${composites.length} prospects to data/output/scored-prospects.json`)
 
@@ -111,36 +151,59 @@ export async function runPipeline(config: UserConfig): Promise<CompositeScore[]>
     totalEligible:   eligible.length,
     totalIneligible: ineligible.length,
     flagBreakdown:   flagCounts,
-    topScore:        composites[0]?.playerScore.score ?? null,
-    bottomScore:     composites[composites.length - 1]?.playerScore.score ?? null,
+    topScore:        composites[0]?.finalScore ?? null,
+    bottomScore:     composites[composites.length - 1]?.finalScore ?? null,
   }
   writeFileSync('./data/output/pipeline-meta.json', JSON.stringify(meta, null, 2))
 
-  // Step 5 — Console summary
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+
+  // Step 6 — Console summary
   console.log('\n═══════════════════════════════════════')
   console.log('  PROSPECT PIPELINE — TOP 10 RESULTS   ')
   console.log('═══════════════════════════════════════\n')
 
   composites.slice(0, 10).forEach(c => {
-    const p = c.player
-    const s = c.playerScore
+    const p  = c.player
+    const ps = c.playerScore
+    const cs = c.cardScore
     const st = p.stats
 
     console.log(`#${c.rankedPosition} ${p.name} (${p.org} — ${p.level}) | Age: ${p.age}`)
     console.log(
-      `   Score: ${s.score} | Confidence: ${s.confidence}` +
-      ` | OPS: ${st.ops.toFixed(3)} | ISO: ${st.iso.toFixed(3)}` +
-      ` | OBP: ${st.obp.toFixed(3)} | K%: ${(st.kPct * 100).toFixed(1)}%` +
-      ` | PA: ${st.pa}`
+      `   Player: ${ps.score} | Card: ${cs.score} | Signal: ${c.timingSignal}`,
     )
-    const gemFlags = s.flags.filter(f => f.startsWith('ELITE_') || f === 'MULTI_TOOL_PROFILE')
+    console.log(
+      `   OPS: ${st.ops.toFixed(3)} | ISO: ${st.iso.toFixed(3)}` +
+      ` | K%: ${(st.kPct * 100).toFixed(1)}%` +
+      ` | PA: ${st.pa}`,
+    )
+
+    if (cs.cardFound) {
+      const priceDisplay = cs.pricingAvailable ? `$${cs.recentAvg.toFixed(2)} avg` : 'N/A'
+      console.log(
+        `   💳 ${cs.cardName ?? 'Bowman Chrome 1st'}` +
+        ` | ${priceDisplay}` +
+        ` | ${cs.trendDirection} (${cs.trendConfidence})` +
+        ` | Est. ROI: ${cs.roiEstimate}x`,
+      )
+      if (cs.budgetFlag) console.log(`   ⚠️  EXCEEDS BUDGET CEILING`)
+    } else {
+      console.log(`   💳 No card found in CardSight catalog`)
+    }
+
+    const gemFlags = ps.flags.filter(f =>
+      f.startsWith('ELITE_') || f === 'MULTI_TOOL_PROFILE',
+    )
     if (gemFlags.length) console.log(`   ⭐ ${gemFlags.join(', ')}`)
-    const otherFlags = s.flags.filter(f => !f.startsWith('ELITE_') && f !== 'MULTI_TOOL_PROFILE')
-    if (otherFlags.length) console.log(`   Flags: ${otherFlags.join(', ')}`)
     console.log()
   })
 
-  console.log(`Signal: ${composites.length} prospects scored | Run: ${new Date().toLocaleString()}`)
+  console.log(
+    `Signal: ${composites.length} prospects scored | ` +
+    `Run: ${new Date().toLocaleString()} | ` +
+    `Elapsed: ${elapsed}s`,
+  )
 
   return composites
 }
