@@ -45,6 +45,7 @@ export function scoreCard(
       trendConfidence:  'low',
       roiEstimate:      0,
       budgetFlag:       false,
+      compCount:        0,
       flags:            ['CARD_NOT_FOUND'],
     }
   }
@@ -62,6 +63,7 @@ export function scoreCard(
       trendConfidence:  'low',
       roiEstimate:      0,
       budgetFlag:       false,
+      compCount:        0,
       flags:            ['PRICING_UNAVAILABLE'],
     }
   }
@@ -137,6 +139,7 @@ export function scoreCard(
     trendConfidence:  marketData.trendConfidence,
     roiEstimate,
     budgetFlag:       marketData.budgetFlag,
+    compCount:        marketData.compCount,
     flags,
   }
 }

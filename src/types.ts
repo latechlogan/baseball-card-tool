@@ -121,6 +121,7 @@ export interface CardOpportunityScore {
   trendConfidence:  'high' | 'medium' | 'low';
   roiEstimate:      number;           // multiplier: e.g. 2.1 = expect 2.1x return
   budgetFlag:       boolean;
+  compCount:        number;
   flags:            string[];
 }
 
@@ -197,4 +198,23 @@ export interface ScoringThresholds {
 export interface UserConfig {
   budgetCeiling: number;
   thresholds: ScoringThresholds;
+}
+
+export interface PipelineMeta {
+  runAt:            string
+  season:           number
+  totalFetched:     number
+  totalEligible:    number
+  totalIneligible:  number
+  cardsFound:       number
+  pricingAvailable: number
+  signals: {
+    buyNow: number
+    watch:  number
+    avoid:  number
+  }
+  flagBreakdown:  Record<string, number>
+  topScore:       number | null
+  topPlayer:      string | null
+  bottomScore:    number | null
 }

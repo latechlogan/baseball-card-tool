@@ -8,8 +8,9 @@ import { scoreCard } from './layers/cardScore.js'
 import { fetchRedditSentiment, getNeutralSentiment } from './scrapers/reddit.js'
 import { buildCompositeScore } from './layers/compositeScore.js'
 import { cache } from './cache.js'
+import { generateBuyList } from './output/buyList.js'
 import type {
-  UserConfig, Player, PlayerScore, CardOpportunityScore, CompositeScore, PercentileContext,
+  UserConfig, Player, PlayerScore, CardOpportunityScore, CompositeScore, PercentileContext, PipelineMeta,
 } from './types.js'
 
 // Parse season from CLI args: npm run pipeline -- --season 2025
@@ -101,7 +102,7 @@ export async function runPipeline(config: UserConfig): Promise<CompositeScore[]>
       ? getNeutralSentiment()
       : await fetchRedditSentiment(p.player.name, config)
     fullyScored.push({ ...p, sentimentScore })
-    if (!skipSentiment) await new Promise(resolve => setTimeout(resolve, 2500))
+    if (!skipSentiment) await new Promise(resolve => setTimeout(resolve, 1000))
   }
 
   console.log('[pipeline] sentiment complete')
@@ -132,7 +133,7 @@ export async function runPipeline(config: UserConfig): Promise<CompositeScore[]>
   const buyNow = composites.filter(c => c.timingSignal === 'BUY_NOW')
   const avoid  = composites.filter(c => c.timingSignal === 'AVOID')
 
-  const meta = {
+  const meta: PipelineMeta = {
     runAt:            new Date().toISOString(),
     season:           SEASON,
     totalFetched:     players.length,
@@ -217,6 +218,9 @@ export async function runPipeline(config: UserConfig): Promise<CompositeScore[]>
   console.log(`🟢 BUY NOW: ${buyNow.length} | 🟡 WATCH: ${composites.length - buyNow.length - avoid.length} | 🔴 AVOID: ${avoid.length}`)
   console.log(`Run: ${new Date().toLocaleString()} | Season: ${SEASON}`)
   console.log(`Elapsed: ${elapsed}s`)
+
+  await generateBuyList(composites, meta, config)
+  console.log('[pipeline] buy list written to data/output/buy-list.md')
 
   return composites
 }

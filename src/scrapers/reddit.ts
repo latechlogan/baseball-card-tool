@@ -3,7 +3,7 @@ import { summarizeSentiment } from '../ai.js'
 import type { SentimentScore, RedditPost, UserConfig } from '../types.js'
 
 const HEADERS = { 'User-Agent': 'baseball-card-tool/1.0 (research tool)' }
-const CACHE_MAX_AGE_HOURS = 12
+const CACHE_MAX_AGE_HOURS = 48
 
 function deriveSentimentScore(
   chatter: 'low' | 'moderate' | 'high',
@@ -162,27 +162,25 @@ export async function fetchRedditSentiment(
   }
 }
 
-async function fetchWithRetry(
-  url:        string,
-  headers:    Record<string, string>,
-  maxRetries: number = 3
+async function fetchWithBackoff(
+  url:     string,
+  headers: Record<string, string>
 ): Promise<Response | null> {
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      const res = await fetch(url, { headers })
-      if (res.status === 429) {
-        const waitMs = Math.pow(2, attempt) * 2000
-        console.warn(`[reddit] 429 — retry ${attempt + 1}/${maxRetries} in ${waitMs}ms`)
-        await new Promise(resolve => setTimeout(resolve, waitMs))
-        continue
-      }
-      return res
-    } catch (e) {
-      console.warn(`[reddit] fetch error attempt ${attempt + 1}:`, e)
+  try {
+    const res = await fetch(url, { headers })
+    if (res.status === 429) {
+      console.warn(`[reddit] rate limited — using fallback for this player`)
+      return null
     }
+    if (!res.ok) {
+      console.warn(`[reddit] ${res.status} on ${url}`)
+      return null
+    }
+    return res
+  } catch (e) {
+    console.warn(`[reddit] fetch error:`, e)
+    return null
   }
-  console.warn(`[reddit] all retries exhausted`)
-  return null
 }
 
 async function fetchSubreddit(
@@ -193,10 +191,9 @@ async function fetchSubreddit(
   const url = `https://www.reddit.com/r/${subreddit}/search.json` +
     `?q=${encodeURIComponent(query)}&restrict_sr=1&sort=new&limit=25&t=month`
 
-  const res = await fetchWithRetry(url, headers)
+  const res = await fetchWithBackoff(url, headers)
 
-  if (!res || !res.ok) {
-    if (res) console.warn(`[reddit] ${subreddit} search failed: ${res.status}`)
+  if (!res) {
     return { organic: [], mechanical: [] }
   }
 
