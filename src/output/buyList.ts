@@ -25,14 +25,23 @@ function confidenceLabel(confidence: string): string {
   return ({ high: '🔵 High', medium: '🟡 Medium', low: '⚪ Low' } as Record<string, string>)[confidence] ?? confidence
 }
 
+function awarenessLabel(level: string): string {
+  return ({
+    unknown:    '👻 Unknown to hobby',
+    emerging:   '👀 Emerging awareness',
+    well_known: '📢 Well known',
+    peak_hype:  '🔥 Peak hype',
+  } as Record<string, string>)[level] ?? level
+}
+
 export function generateRationale(composite: CompositeScore): string {
   const { playerScore, cardScore, sentimentScore, timingSignal } = composite
 
   if (timingSignal === 'BUY_NOW') {
-    if (sentimentScore.chatterLevel === 'low' && cardScore.trendDirection === 'rising') {
+    if ((sentimentScore.awarenessLevel === 'unknown' || sentimentScore.awarenessLevel === 'emerging') && cardScore.trendDirection === 'rising') {
       return 'Market is asleep on a rising card — classic pre-breakout entry window.'
     }
-    if (sentimentScore.chatterLevel === 'low' && cardScore.trendDirection === 'flat') {
+    if ((sentimentScore.awarenessLevel === 'unknown' || sentimentScore.awarenessLevel === 'emerging') && cardScore.trendDirection === 'flat') {
       return 'Low hobby awareness with stable card pricing — patient entry opportunity.'
     }
     return 'Strong multi-layer alignment across player quality, card market, and sentiment.'
@@ -48,7 +57,7 @@ export function generateRationale(composite: CompositeScore): string {
     if (!cardScore.cardFound && playerScore.score < 40) {
       return 'No card found in catalog and player analytics are insufficient to justify a manual search.'
     }
-    if (sentimentScore.chatterLevel === 'high') {
+    if (sentimentScore.awarenessLevel === 'peak_hype' || sentimentScore.awarenessLevel === 'well_known') {
       return 'Hobby community is already fully aware — alpha has been priced in.'
     }
     return 'Risk factors outweigh opportunity across the three scoring layers.'
@@ -67,7 +76,7 @@ export function generateRationale(composite: CompositeScore): string {
   if (playerScore.score < 35) {
     return `Card opportunity looks decent but player analytics need strengthening — higher PA sample would help.`
   }
-  if (sentimentScore.chatterLevel === 'moderate') {
+  if (sentimentScore.awarenessLevel === 'emerging') {
     return `Hobby awareness is building — window may be narrowing, monitor chatter trend closely.`
   }
   return `No single layer is strong enough to trigger a buy — check back as season data accumulates.`
@@ -94,8 +103,8 @@ function renderFullEntry(c: CompositeScore): string {
     ? (cs.budgetFlag ? `⚠️ Exceeds ceiling` : `✅ Within ceiling`)
     : 'N/A'
 
-  const summaryLine = ss.summary && ss.summary !== 'Sentiment summary unavailable.'
-    ? `- ${ss.summary}\n`
+  const summaryLine = ss.reasoning && ss.reasoning !== 'Sentiment data unavailable.'
+    ? `- ${ss.reasoning}\n`
     : ''
 
   const eliteFlagsLine = gemFlags.length > 0
@@ -124,8 +133,8 @@ function renderFullEntry(c: CompositeScore): string {
     `- **Budget:** ${budgetDisplay}`,
     '',
     '**Sentiment**',
-    `- **Chatter:** ${ss.chatterLevel} | **Trend:** ${ss.trend}`,
-    `- **Organic posts:** ${ss.postCount} | **Mechanical mentions:** ${ss.mechanicalMentionCount}`,
+    `- **Awareness:** ${awarenessLabel(ss.awarenessLevel)} | **Confidence:** ${ss.confidence}`,
+    `- **Posts found:** ${ss.postCount}`,
     summaryLine.trimEnd(),
     `**Why ${c.timingSignal.replace('_', ' ')}:**`,
     generateRationale(c),
@@ -273,11 +282,11 @@ export async function generateBuyList(
         compCount:   c.cardScore.compCount,
       },
       sentiment: {
-        chatterLevel:           c.sentimentScore.chatterLevel,
-        trend:                  c.sentimentScore.trend,
-        postCount:              c.sentimentScore.postCount,
-        mechanicalMentionCount: c.sentimentScore.mechanicalMentionCount,
-        summary:                c.sentimentScore.summary,
+        awarenessLevel: c.sentimentScore.awarenessLevel,
+        timingSignal:   c.sentimentScore.timingSignal,
+        confidence:     c.sentimentScore.confidence,
+        postCount:      c.sentimentScore.postCount,
+        reasoning:      c.sentimentScore.reasoning,
       },
       rationale:  generateRationale(c),
       eliteFlags: c.playerScore.flags.filter(f =>

@@ -9,8 +9,9 @@ function deriveTimingSignal(
   sentimentScore: SentimentScore,
 ): TimingSignal {
   // Rule 1 — Hard AVOID: market fully awake; alpha eliminated regardless of other signals
-  if (sentimentScore.chatterLevel === 'high' &&
-      sentimentScore.trend !== 'declining') {
+  if (sentimentScore.awarenessLevel === 'peak_hype' ||
+     (sentimentScore.awarenessLevel === 'well_known' &&
+      sentimentScore.timingSignal === 'AVOID')) {
     return 'AVOID'
   }
 
@@ -34,7 +35,7 @@ function deriveTimingSignal(
   if (playerScore.score      >= 45 &&
       cardScore.score        >= 50 &&
       cardScore.trendDirection !== 'falling' &&
-      sentimentScore.chatterLevel !== 'high') {
+      sentimentScore.awarenessLevel !== 'well_known') {
     return 'BUY_NOW'
   }
 
@@ -48,7 +49,8 @@ function deriveTimingSignal(
   // Rule 7 — BUY_NOW: card momentum not yet reflected in community awareness
   if (cardScore.trendDirection  === 'rising' &&
       cardScore.trendConfidence !== 'low' &&
-      sentimentScore.chatterLevel === 'low' &&
+      (sentimentScore.awarenessLevel === 'unknown' ||
+       sentimentScore.awarenessLevel === 'emerging') &&
       playerScore.score >= 30) {
     return 'BUY_NOW'
   }

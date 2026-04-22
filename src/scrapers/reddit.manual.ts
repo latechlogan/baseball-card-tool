@@ -13,13 +13,11 @@ for (const player of players) {
 
   const sentiment = await fetchRedditSentiment(player, config)
 
-  console.log(`Organic posts:       ${sentiment.postCount}`)
-  console.log(`Mechanical mentions: ${sentiment.mechanicalMentionCount}`)
-  console.log(`Comments:            ${sentiment.commentCount}`)
-  console.log(`Chatter:       ${sentiment.chatterLevel}`)
-  console.log(`Trend:         ${sentiment.trend}`)
-  console.log(`Signal:        ${sentiment.timingSignal}`)
-  console.log(`Summary:       ${sentiment.summary}`)
+  console.log(`Posts found:     ${sentiment.postCount}`)
+  console.log(`Awareness:       ${sentiment.awarenessLevel}`)
+  console.log(`Confidence:      ${sentiment.confidence}`)
+  console.log(`Signal:          ${sentiment.timingSignal}`)
+  console.log(`Reasoning:       ${sentiment.reasoning}`)
 
   if (sentiment.topPosts.length > 0) {
     console.log('\nTop posts:')

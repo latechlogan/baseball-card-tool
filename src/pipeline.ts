@@ -198,12 +198,12 @@ export async function runPipeline(config: UserConfig): Promise<CompositeScore[]>
     }
 
     console.log(
-      `   💬 ${ss.chatterLevel} chatter | ${ss.trend}` +
-      ` | ${ss.postCount} posts / ${ss.mechanicalMentionCount} mechanical`
+      `   💬 ${ss.awarenessLevel} | ${ss.confidence} confidence` +
+      ` | ${ss.postCount} posts | ${ss.timingSignal}`
     )
 
-    if (ss.summary && ss.summary !== 'Sentiment summary unavailable.') {
-      console.log(`   "${ss.summary}"`)
+    if (ss.reasoning && ss.reasoning !== 'Sentiment data unavailable.') {
+      console.log(`   "${ss.reasoning}"`)
     }
 
     const gemFlags = ps.flags.filter(f =>

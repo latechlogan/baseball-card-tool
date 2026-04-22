@@ -137,15 +137,14 @@ export interface RedditPost {
 }
 
 export interface SentimentScore {
-  score:                 number;   // 0–100 derived from chatter + trend
-  chatterLevel:          'low' | 'moderate' | 'high';
-  trend:                 'rising' | 'stable' | 'declining';
-  timingSignal:          'BUY_NOW' | 'WATCH' | 'AVOID';
-  summary:               string;
-  postCount:             number;   // organic posts only
-  commentCount:          number;   // organic posts only
-  mechanicalMentionCount: number;  // daily threads, stats posts, sale listings
-  topPosts:              RedditPost[];  // organic posts only
+  awarenessLevel:  'unknown' | 'emerging' | 'well_known' | 'peak_hype'
+  timingSignal:    'BUY_NOW' | 'WATCH' | 'AVOID'
+  confidence:      'high' | 'medium' | 'low'
+  reasoning:       string
+  summary:         string   // kept for backward compat with buyList.ts display
+  score:           number   // 0–100, derived from awarenessLevel + timingSignal
+  postCount:       number
+  topPosts:        RedditPost[]
 }
 
 export interface CompositeScore {

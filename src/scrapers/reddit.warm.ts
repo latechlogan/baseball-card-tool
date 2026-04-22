@@ -16,16 +16,14 @@ const scored  = JSON.parse(
 const players = scored.map(c => c.player.name)
 
 console.log(`[sentiment:warm] warming cache for ${players.length} players`)
-console.log(`[sentiment:warm] estimated time: ~${players.length * 15}s\n`)
+console.log(`[sentiment:warm] estimated time: ~${players.length * 30}s\n`)
 
 for (const [i, name] of players.entries()) {
   console.log(`[${i + 1}/${players.length}] ${name}`)
   await fetchRedditSentiment(name, config)
 
-  // 12 second gap between players — well under Reddit's rate limit
-  // Each player makes up to 9 requests; 12s spacing = ~0.75 req/s average
   if (i < players.length - 1) {
-    await new Promise(resolve => setTimeout(resolve, 12000))
+    await new Promise(resolve => setTimeout(resolve, 30000))
   }
 }
 
