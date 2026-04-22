@@ -3,6 +3,11 @@ import { cache } from '../cache.js'
 import { assessHobbyAwareness } from '../ai.js'
 import type { UserConfig, SentimentScore } from '../types.js'
 
+function isFallback(result: SentimentScore): boolean {
+  return result.reasoning === 'Sentiment analysis unavailable.' ||
+         result.reasoning === 'Sentiment data unavailable.'
+}
+
 export async function fetchSentiment(
   playerName: string,
   _config:    UserConfig
@@ -20,7 +25,12 @@ export async function fetchSentiment(
 
   const result = await assessHobbyAwareness(playerName)
 
-  cache.set(cacheKey, result)
+  if (!isFallback(result)) {
+    cache.set(cacheKey, result)
+  } else {
+    console.warn(`[sentiment] fallback result for ${playerName} — not caching`)
+  }
+
   return result
 }
 

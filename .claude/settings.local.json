@@ -11,7 +11,9 @@
       "Bash(npx tsx *)",
       "Bash(npm uninstall *)",
       "Bash(tsx src/scrapers/cardSight.explore.ts)",
-      "Bash(npm ls *)"
+      "Bash(npm ls *)",
+      "Bash(tsx src/ai.debug.ts)",
+      "Bash(node -e \"const d=require\\('./data/output/scored-prospects.json'\\); const g=d.find\\(p=>p.player.name==='John Gil'\\); console.log\\(JSON.stringify\\({timingSignal:g.timingSignal,'sentimentScore.timingSignal':g.sentimentScore.timingSignal,cardTrend:g.cardScore.trendDirection,cardConf:g.cardScore.trendConfidence,playerScore:g.playerScore.score},null,2\\)\\)\")"
     ]
   }
 }

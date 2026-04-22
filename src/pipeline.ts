@@ -94,7 +94,7 @@ export async function runPipeline(config: UserConfig): Promise<CompositeScore[]>
   )
 
   // Step 4 — Fetch sentiment (eligible players only, sequential)
-  console.log('[pipeline] assessing hobby awareness...')
+  console.log(`[pipeline] fetching sentiment (${eligibleWithCards.length} players, ~${Math.ceil(eligibleWithCards.length * 45 / 60)} min)...`)
 
   const fullyScored = []
   for (const p of eligibleWithCards) {
@@ -102,6 +102,10 @@ export async function runPipeline(config: UserConfig): Promise<CompositeScore[]>
       ? getNeutralSentiment()
       : await fetchSentiment(p.player.name, config)
     fullyScored.push({ ...p, sentimentScore })
+
+    if (!skipSentiment) {
+      await new Promise(resolve => setTimeout(resolve, 45000))
+    }
   }
 
   console.log('[pipeline] sentiment complete')

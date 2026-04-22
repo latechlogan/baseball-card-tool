@@ -1,5 +1,36 @@
 import type { SentimentScore } from './types.js'
 
+async function fetchWithRateLimitRetry(
+  body: object,
+  maxRetries = 3
+): Promise<any> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method:  'POST',
+      headers: {
+        'Content-Type':      'application/json',
+        'x-api-key':         process.env.ANTHROPIC_API_KEY ?? '',
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(body),
+    })
+
+    const data = await response.json() as any
+
+    if (data?.error?.type === 'rate_limit_error') {
+      const waitMs = Math.pow(2, attempt) * 30000  // 30s, 60s, 120s
+      console.warn(`[ai] rate limit hit — waiting ${waitMs / 1000}s before retry ${attempt + 1}/${maxRetries}`)
+      await new Promise(resolve => setTimeout(resolve, waitMs))
+      continue
+    }
+
+    return data
+  }
+
+  console.warn('[ai] rate limit retries exhausted — returning fallback')
+  return null
+}
+
 export async function assessHobbyAwareness(
   playerName: string
 ): Promise<SentimentScore> {
@@ -32,27 +63,26 @@ Respond with JSON only. No preamble, no markdown fences.
   "reasoning": "string"
 }`
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method:  'POST',
-    headers: {
-      'Content-Type':      'application/json',
-      'x-api-key':         process.env.ANTHROPIC_API_KEY ?? '',
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model:      'claude-haiku-4-5',
-      max_tokens: 300,
-      tools: [
-        {
-          type: 'web_search_20250305',
-          name: 'web_search',
-        }
-      ],
-      messages: [{ role: 'user', content: prompt }],
-    }),
+  const data = await fetchWithRateLimitRetry({
+    model:      'claude-haiku-4-5',
+    max_tokens: 1000,
+    tools: [
+      {
+        type: 'web_search_20250305',
+        name: 'web_search',
+      }
+    ],
+    messages: [{ role: 'user', content: prompt }],
   })
 
-  const data    = await response.json() as any
+  if (!data) return getNeutralFallback()
+
+  console.log('[ai:debug] content blocks:', data?.content?.length)
+  console.log('[ai:debug] text block:',
+    data?.content?.filter((b: any) => b.type === 'text').map((b: any) => b.text)
+  )
+  console.log('[ai:debug] error:', data?.error)
+
   const content = data?.content ?? []
 
   const textBlock = content
@@ -62,7 +92,10 @@ Respond with JSON only. No preamble, no markdown fences.
     .trim()
 
   try {
-    const clean  = textBlock.replace(/```json|```/g, '').trim()
+    const start  = textBlock.indexOf('{')
+    const end    = textBlock.lastIndexOf('}')
+    if (start === -1 || end === -1) throw new Error('No JSON object found in response')
+    const clean  = textBlock.slice(start, end + 1)
     const parsed = JSON.parse(clean)
 
     const scoreMap: Record<string, number> = {
@@ -72,12 +105,15 @@ Respond with JSON only. No preamble, no markdown fences.
       peak_hype:  5,
     }
 
+    const stripCitations = (text: string): string =>
+      text.replace(/<cite[^>]*>|<\/cite>/g, '').trim()
+
     return {
       awarenessLevel: parsed.awarenessLevel,
       timingSignal:   parsed.timingSignal,
       confidence:     parsed.confidence,
-      reasoning:      parsed.reasoning,
-      summary:        parsed.reasoning,
+      reasoning:      stripCitations(parsed.reasoning),
+      summary:        stripCitations(parsed.reasoning),
       score:          scoreMap[parsed.awarenessLevel] ?? 50,
     }
   } catch {
