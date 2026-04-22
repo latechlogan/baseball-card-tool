@@ -127,24 +127,13 @@ export interface CardOpportunityScore {
 
 export type TimingSignal = 'BUY_NOW' | 'WATCH' | 'AVOID';
 
-export interface RedditPost {
-  title:       string;
-  subreddit:   string;
-  score:       number;
-  numComments: number;
-  createdUtc:  number;
-  url:         string;
-}
-
 export interface SentimentScore {
   awarenessLevel:  'unknown' | 'emerging' | 'well_known' | 'peak_hype'
   timingSignal:    'BUY_NOW' | 'WATCH' | 'AVOID'
   confidence:      'high' | 'medium' | 'low'
   reasoning:       string
-  summary:         string   // kept for backward compat with buyList.ts display
-  score:           number   // 0–100, derived from awarenessLevel + timingSignal
-  postCount:       number
-  topPosts:        RedditPost[]
+  summary:         string
+  score:           number   // 0–100, derived from awarenessLevel
 }
 
 export interface CompositeScore {

@@ -5,7 +5,7 @@ import { scorePlayer } from './layers/playerScore.js'
 import { buildPeerGroups, getPercentileContext } from './layers/peerGroups.js'
 import { fetchCardMarketData } from './scrapers/cardSight.js'
 import { scoreCard } from './layers/cardScore.js'
-import { fetchRedditSentiment, getNeutralSentiment } from './scrapers/reddit.js'
+import { fetchSentiment, getNeutralSentiment } from './scrapers/sentiment.js'
 import { buildCompositeScore } from './layers/compositeScore.js'
 import { cache } from './cache.js'
 import { generateBuyList } from './output/buyList.js'
@@ -94,15 +94,14 @@ export async function runPipeline(config: UserConfig): Promise<CompositeScore[]>
   )
 
   // Step 4 — Fetch sentiment (eligible players only, sequential)
-  console.log('[pipeline] fetching Reddit sentiment...')
+  console.log('[pipeline] assessing hobby awareness...')
 
   const fullyScored = []
   for (const p of eligibleWithCards) {
     const sentimentScore = skipSentiment
       ? getNeutralSentiment()
-      : await fetchRedditSentiment(p.player.name, config)
+      : await fetchSentiment(p.player.name, config)
     fullyScored.push({ ...p, sentimentScore })
-    if (!skipSentiment) await new Promise(resolve => setTimeout(resolve, 1000))
   }
 
   console.log('[pipeline] sentiment complete')
@@ -198,8 +197,7 @@ export async function runPipeline(config: UserConfig): Promise<CompositeScore[]>
     }
 
     console.log(
-      `   💬 ${ss.awarenessLevel} | ${ss.confidence} confidence` +
-      ` | ${ss.postCount} posts | ${ss.timingSignal}`
+      `   💬 ${ss.awarenessLevel} | ${ss.confidence} confidence | ${ss.timingSignal}`
     )
 
     if (ss.reasoning && ss.reasoning !== 'Sentiment data unavailable.') {

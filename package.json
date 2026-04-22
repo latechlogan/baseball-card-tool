@@ -13,10 +13,7 @@
     "test": "tsx --test src/**/*.test.ts",
     "scraper:mlb": "tsx src/scrapers/mlbStatsApi.manual.ts",
     "scraper:cards": "tsx src/scrapers/cardSight.manual.ts",
-    "scraper:reddit": "tsx src/scrapers/reddit.manual.ts",
-    "buylist": "tsx src/output/buyList.manual.ts",
-    "sentiment:warm": "tsx src/scrapers/reddit.warm.ts --season 2025",
-    "sentiment:warm:2025": "tsx src/scrapers/reddit.warm.ts --season 2025"
+    "buylist": "tsx src/output/buyList.manual.ts"
   },
   "repository": {
     "type": "git",
@@ -37,7 +34,6 @@
   },
   "dependencies": {
     "cardsightai": "^3.4.1",
-    "dotenv": "^17.4.2",
-    "playwright": "^1.59.1"
+    "dotenv": "^17.4.2"
   }
 }

@@ -10,7 +10,8 @@
       "Bash(npx tsx -e ' *)",
       "Bash(npx tsx *)",
       "Bash(npm uninstall *)",
-      "Bash(tsx src/scrapers/cardSight.explore.ts)"
+      "Bash(tsx src/scrapers/cardSight.explore.ts)",
+      "Bash(npm ls *)"
     ]
   }
 }
