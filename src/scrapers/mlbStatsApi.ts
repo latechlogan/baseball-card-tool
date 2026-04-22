@@ -93,6 +93,19 @@ function mapPosition(code: string): Player['position'] {
   return POSITION_MAP[code] ?? 'OF';
 }
 
+// ─── Age Calculation ──────────────────────────────────────────────────────────
+
+function calculateAge(birthDate: string, referenceDate?: Date): number {
+  const birth = new Date(birthDate)
+  const ref   = referenceDate ?? new Date()
+  let age = ref.getFullYear() - birth.getFullYear()
+  const monthDiff = ref.getMonth() - birth.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && ref.getDate() < birth.getDate())) {
+    age--
+  }
+  return age
+}
+
 // ─── Age Filter ───────────────────────────────────────────────────────────────
 
 function isAgeEligible(player: Player, config: UserConfig): boolean {
@@ -102,7 +115,7 @@ function isAgeEligible(player: Player, config: UserConfig): boolean {
 
 // ─── Normalization ────────────────────────────────────────────────────────────
 
-function normalizeSplit(split: StatSplit, profile: PlayerProfile, level: MiLBLevel): Player | null {
+function normalizeSplit(split: StatSplit, profile: PlayerProfile, level: MiLBLevel, referenceDate?: Date): Player | null {
   const avg  = parseFloat(split.stat.avg);
   const obp  = parseFloat(split.stat.obp);
   const slg  = parseFloat(split.stat.slg);
@@ -152,7 +165,7 @@ function normalizeSplit(split: StatSplit, profile: PlayerProfile, level: MiLBLev
   return {
     name:     profile.fullName,
     playerId: String(profile.id),
-    age:      profile.currentAge,
+    age:      calculateAge(profile.birthDate, referenceDate),
     level,
     org:      split.team.name,
     position,
@@ -173,8 +186,9 @@ function normalizeSplit(split: StatSplit, profile: PlayerProfile, level: MiLBLev
 // ─── Main Export ──────────────────────────────────────────────────────────────
 
 export async function fetchMiLBHitters(
-  season: number,
-  config: UserConfig
+  season:         number,
+  config:         UserConfig,
+  referenceDate?: Date
 ): Promise<Player[]> {
   const cacheKey = `mlb-milb-hitters-${season}`;
 
@@ -261,7 +275,7 @@ export async function fetchMiLBHitters(
           continue;
         }
 
-        const player = normalizeSplit(split, profile, level);
+        const player = normalizeSplit(split, profile, level, referenceDate);
         if (player !== null) {
           players.push(player);
         }

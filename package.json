@@ -13,7 +13,8 @@
     "test": "tsx --test src/**/*.test.ts",
     "scraper:mlb": "tsx src/scrapers/mlbStatsApi.manual.ts",
     "scraper:cards": "tsx src/scrapers/cardSight.manual.ts",
-    "buylist": "tsx src/output/buyList.manual.ts"
+    "buylist": "tsx src/output/buyList.manual.ts",
+    "calibrate": "tsx src/calibration/calibrate.manual.ts"
   },
   "repository": {
     "type": "git",

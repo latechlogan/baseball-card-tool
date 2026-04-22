@@ -1,0 +1,41 @@
+{
+  "playerName": "Evan Carter",
+  "buyDate": "2022-04-20",
+  "outcome": "hit",
+  "season": 2022,
+  "playerFound": true,
+  "playerScore": {
+    "score": 59,
+    "confidence": "high",
+    "flags": [
+      "ELITE_OPS_FOR_LEVEL",
+      "ELITE_CONTACT_FOR_LEVEL",
+      "MULTI_TOOL_PROFILE"
+    ],
+    "eligible": true
+  },
+  "eligible": true,
+  "wouldSignal": "BUY_NOW",
+  "modelVerdict": "CORRECT",
+  "statLine": {
+    "pa": 447,
+    "ab": 376,
+    "hits": 108,
+    "doubles": 18,
+    "triples": 10,
+    "homeRuns": 11,
+    "strikeOuts": 75,
+    "baseOnBalls": 59,
+    "avg": 0.287,
+    "obp": 0.388,
+    "slg": 0.476,
+    "ops": 0.864,
+    "bbPct": 0.1319910514541387,
+    "kPct": 0.16778523489932887,
+    "bbKRatio": 0.7866666666666666,
+    "xbhPct": 0.3611111111111111,
+    "iso": 0.189
+  },
+  "notes": "I'll search for information about Evan Carter's prospect status and career trajectory around that 2022 timeframe.## Summary: Evan Carter Card Investment (April 2022 Buy)\n\nAt the time of purchase in April 2022, Carter had just completed a strong 2022 season split between High-A and Double-A, batting .295/.397/.489 with 12 home runs and 28 stolen bases, earning the Texas Rangers 2022 Player of the Year award. However, he was only ranked as the 26th overall prospect by Baseball America, 41st by MLB Pipeline, and 53rd by The Athletic, making him a mid-tier prospect at the time—a potentially undervalued position if his trajectory accelerated.\n\nThe profit signals became clear after the purchase date: Carter made his MLB debut on September 8, 2023, and delivered his first career hit and stolen base. Critically, he recorded 9 doubles in a single MLB postseason—a new record—and helped the Rangers win their first World Series title ever. This unexpected postseason heroics immediately elevated his card value, as rookie cards from World Series contributors command significant premiums.\n\nThe investment succeeded because Carter proved to be a rare find: a moderately-ranked prospect who rapidly transitioned to immediate MLB impact on a championship team, combining the attractive elements of youth, proven defensive excellence (Gold Glove award winner in 2022), plate discipline, and postseason production—factors that significantly boosted his card demand following his September 2023 debut and October 2023 playoff run.",
+  "runAt": "2026-04-22T20:18:32.314Z"
+}

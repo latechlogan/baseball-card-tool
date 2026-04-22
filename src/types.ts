@@ -188,6 +188,21 @@ export interface UserConfig {
   thresholds: ScoringThresholds;
 }
 
+export interface CalibrationReport {
+  playerName:    string
+  buyDate:       string
+  outcome:       'hit' | 'miss'
+  season:        number
+  playerFound:   boolean
+  playerScore:   PlayerScore | null
+  eligible:      boolean
+  wouldSignal:   'BUY_NOW' | 'WATCH' | 'AVOID' | 'NOT_FOUND'
+  modelVerdict:  'CORRECT' | 'INCORRECT' | 'INCONCLUSIVE'
+  statLine:      PlayerStats | null
+  notes:         string
+  runAt:         string
+}
+
 export interface PipelineMeta {
   runAt:            string
   season:           number

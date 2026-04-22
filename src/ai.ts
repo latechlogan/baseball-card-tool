@@ -122,6 +122,56 @@ Respond with JSON only. No preamble, no markdown fences.
   }
 }
 
+export async function assessHistoricalContext(
+  playerName: string,
+  buyDate:     string,
+  outcome:     'hit' | 'miss'
+): Promise<string> {
+  const prompt = `You are providing historical context for a baseball card investment calibration tool.
+
+Player: ${playerName}
+Historical buy date: ${buyDate}
+Known outcome: ${outcome === 'hit' ? 'This was a profitable flip' : 'This was a losing investment'}
+
+Search for information about:
+1. What ${playerName}'s prospect status and MiLB stats looked like around ${buyDate}
+2. What their Bowman Chrome card was worth around that date if findable
+3. Why the investment ${outcome === 'hit' ? 'succeeded' : 'failed'} — what happened to the player's career/prospect status after the buy date
+4. What risk factors or positive signals were visible at the time
+
+Provide a 3-4 sentence summary focused on what a card investor would have known at the time of purchase and what actually happened afterward.`
+
+  try {
+    const data = await fetchWithRateLimitRetry({
+      model:      'claude-haiku-4-5',
+      max_tokens: 400,
+      tools: [
+        {
+          type: 'web_search_20250305',
+          name: 'web_search',
+        }
+      ],
+      messages: [{ role: 'user', content: prompt }],
+    })
+
+    if (!data) return 'Historical context unavailable.'
+
+    const content = data?.content ?? []
+    const textBlock = content
+      .filter((b: any) => b.type === 'text')
+      .map((b: any) => b.text)
+      .join('')
+      .trim()
+
+    const stripCitations = (text: string): string =>
+      text.replace(/<cite[^>]*>|<\/cite>/g, '').trim()
+
+    return textBlock ? stripCitations(textBlock) : 'Historical context unavailable.'
+  } catch {
+    return 'Historical context unavailable.'
+  }
+}
+
 function getNeutralFallback(): SentimentScore {
   return {
     awarenessLevel: 'unknown',
