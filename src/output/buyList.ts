@@ -74,7 +74,9 @@ export function generateRationale(composite: CompositeScore): string {
     return `Insufficient comp volume for confident trend signal — revisit when more sales data accumulates.`
   }
   if (playerScore.score < 35) {
-    return `Card opportunity looks decent but player analytics need strengthening — higher PA sample would help.`
+    return composite.player.stats.pa >= 400
+      ? `Card opportunity is solid but player analytics rank below threshold — review scouting context before buying.`
+      : `Card opportunity looks decent but player analytics need strengthening — higher PA sample would help.`
   }
   if (sentimentScore.awarenessLevel === 'emerging') {
     return `Hobby awareness is building — window may be narrowing, monitor chatter trend closely.`
@@ -118,7 +120,8 @@ function renderFullEntry(c: CompositeScore): string {
     '| Metric | Value |',
     '|--------|-------|',
     `| Final Score | ${c.finalScore} |`,
-    `| Player Score | ${ps.score} (${confidenceLabel(ps.confidence)}) |`,
+    `| Player Score | ${ps.score} |`,
+    `| PA | ${st.pa} |`,
     `| Card Score | ${cs.score} |`,
     `| Sentiment Score | ${ss.score} |`,
     '',

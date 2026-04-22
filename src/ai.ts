@@ -77,12 +77,6 @@ Respond with JSON only. No preamble, no markdown fences.
 
   if (!data) return getNeutralFallback()
 
-  console.log('[ai:debug] content blocks:', data?.content?.length)
-  console.log('[ai:debug] text block:',
-    data?.content?.filter((b: any) => b.type === 'text').map((b: any) => b.text)
-  )
-  console.log('[ai:debug] error:', data?.error)
-
   const content = data?.content ?? []
 
   const textBlock = content
